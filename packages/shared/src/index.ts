@@ -70,3 +70,6 @@ export function getRandomUser(): { name: string; color: string } {
   const name = names[Math.floor(Math.random() * names.length)];
   return { name, color: palette.color };
 }
+
+export * from './templates';
+

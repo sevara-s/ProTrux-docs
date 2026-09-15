@@ -1,14 +1,21 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CRDTManager } from './services/crdt';
 import { getDocuments, createDocument, updateDocument, deleteDocument, getDocument } from './services/api';
-import { DocumentMetadata, UserPresence, SyncStatus, getRandomUser } from '@protrux/shared';
-import { Navbar } from './components/Navbar';
-import { Sidebar } from './components/Sidebar';
-import { OfflineBanner } from './components/OfflineBanner';
+import { DocumentMetadata, UserPresence, SyncStatus, getRandomUser, DocumentTemplate } from '@protrux/shared';
+import { DocsHeader } from './components/DocsHeader';
+import { DocsDashboard } from './components/DocsDashboard';
 import { Editor } from './components/Editor';
+import { OfflineBanner } from './components/OfflineBanner';
+import { ShareModal } from './components/ShareModal';
 
 export const App: React.FC = () => {
-  // Document state
+  // Navigation: 'dashboard' | 'editor'
+  const [view, setView] = useState<'dashboard' | 'editor'>(() => {
+    const hash = window.location.hash.replace(/^#/, '');
+    const params = new URLSearchParams(hash);
+    return params.get('doc') ? 'editor' : 'dashboard';
+  });
+
   const [documents, setDocuments] = useState<DocumentMetadata[]>([]);
   const [currentDocId, setCurrentDocId] = useState<string>(() => {
     const hash = window.location.hash.replace(/^#/, '');
@@ -23,8 +30,9 @@ export const App: React.FC = () => {
   const [collaborators, setCollaborators] = useState<UserPresence[]>([]);
   const [isSimulatedOffline, setIsSimulatedOffline] = useState(false);
 
-  // UI state
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // Dialogs
+  const [isWordCountOpen, setIsWordCountOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [editorInstance, setEditorInstance] = useState<any>(null);
 
   // Current user profile
@@ -66,20 +74,23 @@ export const App: React.FC = () => {
       const hash = window.location.hash.replace(/^#/, '');
       const params = new URLSearchParams(hash);
       const doc = params.get('doc');
-      if (doc && doc !== currentDocId) {
+      if (doc) {
         setCurrentDocId(doc);
+        setView('editor');
+      } else {
+        setView('dashboard');
       }
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [currentDocId]);
+  }, []);
 
-  // Initialize or re-create CRDT manager whenever currentDocId changes
+  // Initialize or re-create CRDT manager whenever currentDocId changes in editor view
   useEffect(() => {
-    // Sync URL hash
+    if (view !== 'editor') return;
+
     window.location.hash = `doc=${encodeURIComponent(currentDocId)}`;
 
-    // Destroy previous CRDT session
     if (crdtManager) {
       crdtManager.destroy();
     }
@@ -89,7 +100,6 @@ export const App: React.FC = () => {
       user: currentUser,
       onStatusChange: (status) => setSyncStatus(status),
       onAwarenessChange: (users) => {
-        // Filter out self from remote collaborator list
         const others = users.filter((u) => u.name !== currentUser.name);
         setCollaborators(others);
       },
@@ -101,19 +111,16 @@ export const App: React.FC = () => {
 
     setCrdtManager(manager);
 
-    // Fetch fresh title
     getDocument(currentDocId)
       .then((doc) => {
         if (doc) setCurrentDocTitle(doc.title);
       })
-      .catch(() => {
-        // If offline, preserve title
-      });
+      .catch(() => {});
 
     return () => {
       manager.destroy();
     };
-  }, [currentDocId]);
+  }, [currentDocId, view]);
 
   // Handle document title rename
   const handleTitleChange = async (newTitle: string) => {
@@ -122,41 +129,59 @@ export const App: React.FC = () => {
       await updateDocument(currentDocId, { title: newTitle });
       refreshDocuments();
     } catch (err) {
-      console.error('Failed to persist renamed title to backend:', err);
+      console.error('Failed to persist title to backend:', err);
     }
   };
 
-  // Handle new document creation
-  const handleCreateDocument = async () => {
-    const defaultTitle = `Document ${documents.length + 1}`;
+  // Handle document creation from Template
+  const handleCreateFromTemplate = async (template: DocumentTemplate) => {
     const newId = `doc-${Date.now()}`;
+    const initialTitle = template.id === 'blank' ? 'Untitled document' : template.name;
+
     try {
-      const created = await createDocument(defaultTitle, newId);
+      const created = await createDocument(initialTitle, newId);
       setDocuments((prev) => [created, ...prev]);
       setCurrentDocId(created.id);
       setCurrentDocTitle(created.title);
-      setIsSidebarOpen(false);
+      setView('editor');
+
+      // Inject template content once editor mounts
+      setTimeout(() => {
+        if (editorInstance && template.content) {
+          editorInstance.commands.setContent(template.content);
+        }
+      }, 400);
     } catch (err) {
-      console.error('Failed to create new document:', err);
-      // Fallback local switch
+      console.error('Failed to create document:', err);
       setCurrentDocId(newId);
-      setCurrentDocTitle(defaultTitle);
-      setIsSidebarOpen(false);
+      setCurrentDocTitle(initialTitle);
+      setView('editor');
     }
   };
 
+  // Handle document creation (blank)
+  const handleNewBlankDocument = () => {
+    handleCreateFromTemplate({
+      id: 'blank',
+      name: 'Untitled document',
+      category: 'General',
+      description: 'Blank',
+      thumbnailColor: '#ffffff',
+      content: '<p></p>',
+    });
+  };
+
   // Handle document deletion
-  const handleDeleteDocument = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this document?')) return;
+  const handleDeleteDocument = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm('Move document to trash?')) return;
 
     try {
       await deleteDocument(id);
       setDocuments((prev) => prev.filter((d) => d.id !== id));
       if (currentDocId === id) {
-        const remaining = documents.filter((d) => d.id !== id);
-        const nextId = remaining[0]?.id || 'welcome-doc';
-        setCurrentDocId(nextId);
+        setView('dashboard');
+        window.location.hash = '';
       }
     } catch (err) {
       console.error('Failed to delete document:', err);
@@ -181,24 +206,28 @@ export const App: React.FC = () => {
     }
   };
 
-  return (
-    <div className="flex h-screen w-screen overflow-hidden bg-paper-100 flex-col font-sans">
-      {/* Workspace Sidebar Drawer */}
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
+  // If on Dashboard view (https://docs.google.com/document/u/0/)
+  if (view === 'dashboard') {
+    return (
+      <DocsDashboard
         documents={documents}
-        currentDocId={currentDocId}
-        onSelectDoc={(id) => {
+        onSelectDocument={(id) => {
           setCurrentDocId(id);
-          setIsSidebarOpen(false);
+          setView('editor');
+          window.location.hash = `doc=${encodeURIComponent(id)}`;
         }}
-        onCreateDoc={handleCreateDocument}
-        onDeleteDoc={handleDeleteDocument}
+        onCreateFromTemplate={handleCreateFromTemplate}
+        onDeleteDocument={handleDeleteDocument}
+        currentUser={currentUser}
       />
+    );
+  }
 
-      {/* Top Navigation Bar */}
-      <Navbar
+  // If on Document Editor view
+  return (
+    <div className="flex h-screen w-screen overflow-hidden bg-[#f9fbfd] flex-col font-sans select-none">
+      {/* Google Docs Top Header & Menus */}
+      <DocsHeader
         title={currentDocTitle}
         onTitleChange={handleTitleChange}
         syncStatus={syncStatus}
@@ -207,7 +236,14 @@ export const App: React.FC = () => {
         onUpdateUser={handleUpdateUser}
         isSimulatedOffline={isSimulatedOffline}
         onToggleSimulateOffline={handleToggleSimulateOffline}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        onOpenWordCount={() => setIsWordCountOpen(true)}
+        onOpenShare={() => setIsShareOpen(true)}
+        onNavigateHome={() => {
+          setView('dashboard');
+          window.location.hash = '';
+        }}
+        onDeleteDocument={() => handleDeleteDocument(currentDocId)}
+        onNewDocument={handleNewBlankDocument}
         editor={editorInstance}
       />
 
@@ -218,18 +254,29 @@ export const App: React.FC = () => {
         onRestore={handleToggleSimulateOffline}
       />
 
-      {/* Main Document Canvas & Tiptap CRDT Editor */}
+      {/* Google Docs Editor Canvas, Toolbar, and Ruler */}
       {crdtManager ? (
         <Editor
           key={currentDocId}
           crdt={crdtManager}
           onEditorReady={(editor) => setEditorInstance(editor)}
+          isWordCountOpen={isWordCountOpen}
+          onCloseWordCount={() => setIsWordCountOpen(false)}
         />
       ) : (
-        <div className="flex-1 flex items-center justify-center text-stone-400 text-sm">
-          Loading document CRDT state...
+        <div className="flex-1 flex items-center justify-center text-[#5f6368] text-sm">
+          Loading document...
         </div>
       )}
+
+      {/* Google Docs Share Modal */}
+      <ShareModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        documentTitle={currentDocTitle}
+        collaborators={collaborators}
+        currentUser={currentUser}
+      />
     </div>
   );
 };
