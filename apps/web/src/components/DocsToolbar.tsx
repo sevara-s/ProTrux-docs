@@ -66,6 +66,46 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
   const [highlightColor, setHighlightColor] = useState('#ffff00');
 
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const lastSelectionRef = useRef<{ from: number; to: number } | null>(null);
+
+  // Sync toolbar indicators with current cursor and editor state
+  useEffect(() => {
+    if (!editor) return;
+
+    const onUpdate = () => {
+      const { from, to } = editor.state.selection;
+      lastSelectionRef.current = { from, to };
+
+      // Update text color indicator
+      const activeColor = editor.getAttributes('textStyle').color;
+      if (activeColor) {
+        setTextColor(activeColor);
+      } else {
+        setTextColor('#000000');
+      }
+
+      // Update highlight color indicator
+      const activeHighlight = editor.getAttributes('highlight').color;
+      if (activeHighlight) {
+        setHighlightColor(activeHighlight);
+      }
+
+      // Update font size indicator
+      const activeSize = (editor.getAttributes('textStyle') as any).fontSize;
+      if (activeSize) {
+        const parsed = parseInt(activeSize, 10);
+        if (!isNaN(parsed)) setFontSize(parsed);
+      }
+    };
+
+    editor.on('selectionUpdate', onUpdate);
+    editor.on('transaction', onUpdate);
+
+    return () => {
+      editor.off('selectionUpdate', onUpdate);
+      editor.off('transaction', onUpdate);
+    };
+  }, [editor]);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -86,27 +126,89 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
     return 'Normal text';
   };
 
+  const restoreSelection = (chain: any) => {
+    if (!editor) return chain;
+    // If current editor selection is already a range, leave it
+    if (!editor.state.selection.empty) {
+      return chain;
+    }
+    // If editor selection collapsed on blur, restore the last known selection
+    if (lastSelectionRef.current && lastSelectionRef.current.from !== lastSelectionRef.current.to) {
+      chain.setTextSelection(lastSelectionRef.current);
+    }
+    return chain;
+  };
+
   const handleFontSizeChange = (delta: number) => {
     const newSize = Math.max(6, Math.min(96, fontSize + delta));
     setFontSize(newSize);
+    if (editor) {
+      const chain = editor.chain().focus() as any;
+      restoreSelection(chain);
+      chain.setFontSize?.(`${newSize}pt`)?.run?.();
+    }
+  };
+
+  const handleSetExactFontSize = (sizeNum: number) => {
+    const size = Math.max(6, Math.min(96, sizeNum));
+    setFontSize(size);
+    if (editor) {
+      const chain = editor.chain().focus() as any;
+      restoreSelection(chain);
+      chain.setFontSize?.(`${size}pt`)?.run?.();
+    }
   };
 
   const handleApplyColor = (color: string) => {
     setTextColor(color);
-    editor.chain().focus().setColor(color).run();
+    if (editor) {
+      const chain = editor.chain().focus();
+      restoreSelection(chain);
+      chain.setColor(color).run();
+    }
+    setActiveDropdown(null);
+  };
+
+  const handleResetColor = () => {
+    setTextColor('#000000');
+    if (editor) {
+      const chain = editor.chain().focus();
+      restoreSelection(chain);
+      chain.unsetColor().run();
+    }
     setActiveDropdown(null);
   };
 
   const handleApplyHighlight = (color: string) => {
     setHighlightColor(color);
-    editor.chain().focus().toggleHighlight({ color }).run();
+    if (editor) {
+      const chain = editor.chain().focus();
+      restoreSelection(chain);
+      chain.setHighlight({ color }).run();
+    }
+    setActiveDropdown(null);
+  };
+
+  const handleResetHighlight = () => {
+    setHighlightColor('#ffff00');
+    if (editor) {
+      const chain = editor.chain().focus();
+      restoreSelection(chain);
+      chain.unsetHighlight().run();
+    }
     setActiveDropdown(null);
   };
 
   return (
     <div
       ref={toolbarRef}
-      className="bg-[#edf2fa] rounded-full mx-4 my-1.5 px-3 py-1 flex items-center gap-0.5 text-[#202124] text-xs shadow-2xs select-none sticky top-14 z-20 overflow-x-auto"
+      onMouseDown={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName !== 'INPUT' && !target.closest('input')) {
+          e.preventDefault();
+        }
+      }}
+      className="bg-[#edf2fa] rounded-full mx-4 my-1.5 px-3 py-1 flex items-center gap-0.5 text-[#202124] text-xs shadow-2xs select-none sticky top-14 z-20 overflow-visible"
     >
       {/* Undo */}
       <button
@@ -251,6 +353,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       <div className="flex items-center">
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => handleFontSizeChange(-1)}
           className="p-1 rounded hover:bg-[#dfe4ea]"
           title="Decrease font size"
@@ -260,11 +363,20 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
         <input
           type="text"
           value={fontSize}
-          onChange={(e) => setFontSize(Number(e.target.value) || 11)}
+          onChange={(e) => {
+            const val = Number(e.target.value);
+            if (!isNaN(val)) handleSetExactFontSize(val);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              editor?.chain().focus().run();
+            }
+          }}
           className="w-7 text-center bg-white border border-[#dadce0] rounded px-0.5 py-0.5 text-xs mx-0.5 outline-none font-medium"
         />
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => handleFontSizeChange(1)}
           className="p-1 rounded hover:bg-[#dfe4ea]"
           title="Increase font size"
@@ -278,6 +390,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       {/* Bold */}
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => editor.chain().focus().toggleBold().run()}
         className={`p-1.5 rounded hover:bg-[#dfe4ea] ${editor.isActive('bold') ? 'bg-[#d3e3fd] text-[#041e49]' : ''}`}
         title="Bold (Ctrl+B)"
@@ -288,6 +401,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       {/* Italic */}
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => editor.chain().focus().toggleItalic().run()}
         className={`p-1.5 rounded hover:bg-[#dfe4ea] ${editor.isActive('italic') ? 'bg-[#d3e3fd] text-[#041e49]' : ''}`}
         title="Italic (Ctrl+I)"
@@ -298,6 +412,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       {/* Underline */}
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => editor.chain().focus().toggleUnderline().run()}
         className={`p-1.5 rounded hover:bg-[#dfe4ea] ${editor.isActive('underline') ? 'bg-[#d3e3fd] text-[#041e49]' : ''}`}
         title="Underline (Ctrl+U)"
@@ -309,26 +424,52 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       <div className="relative">
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => setActiveDropdown(activeDropdown === 'color' ? null : 'color')}
-          className="p-1.5 rounded hover:bg-[#dfe4ea] flex flex-col items-center"
+          className={`p-1.5 rounded hover:bg-[#dfe4ea] flex flex-col items-center ${activeDropdown === 'color' ? 'bg-[#d3e3fd]' : ''}`}
           title="Text color"
         >
           <span className="font-bold text-xs leading-none">A</span>
           <div className="w-3.5 h-1 mt-0.5 rounded-xs" style={{ backgroundColor: textColor }} />
         </button>
         {activeDropdown === 'color' && (
-          <div className="absolute left-0 mt-1 p-2 bg-white rounded shadow-lg border border-[#dadce0] z-50 w-48">
-            <p className="text-[10px] text-[#5f6368] font-medium mb-1.5">TEXT COLOR</p>
-            <div className="grid grid-cols-10 gap-1">
+          <div
+            onMouseDown={(e) => e.preventDefault()}
+            className="absolute left-0 mt-1 p-2 bg-white rounded shadow-lg border border-[#dadce0] z-50 w-52"
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] text-[#5f6368] font-bold tracking-wider">TEXT COLOR</span>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleResetColor}
+                className="text-[10px] text-[#1a73e8] hover:underline font-medium cursor-pointer"
+              >
+                Reset
+              </button>
+            </div>
+            <div className="grid grid-cols-10 gap-1 mb-2">
               {COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleApplyColor(c)}
-                  className="w-4 h-4 rounded-full border border-black/10 hover:scale-125 transition-transform"
+                  className={`w-4 h-4 rounded-full border border-black/15 hover:scale-125 transition-transform ${textColor.toLowerCase() === c.toLowerCase() ? 'ring-2 ring-[#1a73e8] ring-offset-1' : ''}`}
                   style={{ backgroundColor: c }}
+                  title={c}
                 />
               ))}
+            </div>
+            <div className="pt-1.5 border-t border-[#dadce0] flex items-center justify-between">
+              <span className="text-[10px] text-[#5f6368] font-medium">Custom color:</span>
+              <input
+                type="color"
+                value={textColor}
+                onChange={(e) => handleApplyColor(e.target.value)}
+                className="w-5 h-5 p-0 border-0 rounded cursor-pointer bg-transparent"
+                title="Custom color"
+              />
             </div>
           </div>
         )}
@@ -338,25 +479,52 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       <div className="relative">
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => setActiveDropdown(activeDropdown === 'highlight' ? null : 'highlight')}
-          className="p-1.5 rounded hover:bg-[#dfe4ea] flex flex-col items-center"
+          className={`p-1.5 rounded hover:bg-[#dfe4ea] flex flex-col items-center ${activeDropdown === 'highlight' ? 'bg-[#d3e3fd]' : ''}`}
           title="Highlight color"
         >
           <Highlighter className="w-4 h-4" />
+          <div className="w-3.5 h-0.5 mt-0.5 rounded-xs" style={{ backgroundColor: highlightColor }} />
         </button>
         {activeDropdown === 'highlight' && (
-          <div className="absolute left-0 mt-1 p-2 bg-white rounded shadow-lg border border-[#dadce0] z-50 w-48">
-            <p className="text-[10px] text-[#5f6368] font-medium mb-1.5">HIGHLIGHT COLOR</p>
-            <div className="grid grid-cols-10 gap-1">
+          <div
+            onMouseDown={(e) => e.preventDefault()}
+            className="absolute left-0 mt-1 p-2 bg-white rounded shadow-lg border border-[#dadce0] z-50 w-52"
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] text-[#5f6368] font-bold tracking-wider">HIGHLIGHT COLOR</span>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleResetHighlight}
+                className="text-[10px] text-[#1a73e8] hover:underline font-medium cursor-pointer"
+              >
+                None
+              </button>
+            </div>
+            <div className="grid grid-cols-10 gap-1 mb-2">
               {COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleApplyHighlight(c)}
-                  className="w-4 h-4 rounded-xs border border-black/10 hover:scale-125 transition-transform"
+                  className={`w-4 h-4 rounded-xs border border-black/15 hover:scale-125 transition-transform ${highlightColor.toLowerCase() === c.toLowerCase() ? 'ring-2 ring-[#1a73e8] ring-offset-1' : ''}`}
                   style={{ backgroundColor: c }}
+                  title={c}
                 />
               ))}
+            </div>
+            <div className="pt-1.5 border-t border-[#dadce0] flex items-center justify-between">
+              <span className="text-[10px] text-[#5f6368] font-medium">Custom highlight:</span>
+              <input
+                type="color"
+                value={highlightColor}
+                onChange={(e) => handleApplyHighlight(e.target.value)}
+                className="w-5 h-5 p-0 border-0 rounded cursor-pointer bg-transparent"
+                title="Custom highlight"
+              />
             </div>
           </div>
         )}

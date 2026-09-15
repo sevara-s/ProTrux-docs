@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Extension } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
@@ -19,6 +19,51 @@ import { DocsToolbar } from './DocsToolbar';
 import { DocsRuler } from './DocsRuler';
 import { ModalProvider } from '@/providers/modal-provider';
 import { DEFAULT_DOCUMENT_CONTENT } from '@protrux/shared';
+
+// Google Docs Font Size Extension (applied to textStyle)
+export const FontSize = Extension.create({
+  name: 'fontSize',
+  addOptions() {
+    return {
+      types: ['textStyle'],
+    };
+  },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: (element) => element.style.fontSize,
+            renderHTML: (attributes) => {
+              if (!attributes.fontSize) {
+                return {};
+              }
+              return {
+                style: `font-size: ${attributes.fontSize}`,
+              };
+            },
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setFontSize:
+        (fontSize: string) =>
+        ({ chain }: any) => {
+          return chain().setMark('textStyle', { fontSize }).run();
+        },
+      unsetFontSize:
+        () =>
+        ({ chain }: any) => {
+          return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run();
+        },
+    } as any;
+  },
+});
 
 interface EditorProps {
   crdt: CRDTManager;
@@ -75,6 +120,7 @@ export const Editor: React.FC<EditorProps> = ({
         }),
         TextStyle,
         Color,
+        FontSize,
         FontFamily,
         Link.configure({
           openOnClick: false,
@@ -158,8 +204,10 @@ export const Editor: React.FC<EditorProps> = ({
 
   useEffect(() => {
     if (editor && onEditorReady) {
-      onEditorReady(editor);
-      updateStatistics(editor);
+      queueMicrotask(() => {
+        onEditorReady(editor);
+        updateStatistics(editor);
+      });
     }
   }, [editor, onEditorReady]);
 
