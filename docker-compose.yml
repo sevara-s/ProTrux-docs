@@ -1,0 +1,15 @@
+services:
+  protrux-docs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: protrux-docs-app
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - HOST=0.0.0.0
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

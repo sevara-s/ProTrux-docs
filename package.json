@@ -1,0 +1,19 @@
+{
+  "name": "protrux-docs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Enterprise-grade real-time collaborative document editor with offline-first CRDT synchronization",
+  "scripts": {
+    "dev": "concurrently -n \"server,web\" -c \"blue,green\" \"pnpm --filter @protrux/server dev\" \"pnpm --filter @protrux/web dev\"",
+    "build": "pnpm --filter @protrux/shared build && pnpm --filter @protrux/server build && pnpm --filter @protrux/web build",
+    "start": "pnpm --filter @protrux/server start",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.7",
+    "yjs": "^13.6.32"
+  },
+  "packageManager": "pnpm@11.3.0"
+}
