@@ -25,55 +25,55 @@ export const WordCountModal: React.FC<WordCountModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full p-6 border border-[#dadce0] animate-in fade-in zoom-in-95 duration-150">
-        <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#dadce0]">
-          <h3 className="text-lg font-medium text-[#202124]">Word count</h3>
+    <div className="fixed inset-0 bg-stone-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-stone-200/90 animate-in fade-in zoom-in-95 duration-150">
+        <div className="flex items-center justify-between pb-3 mb-4 border-b border-stone-200">
+          <h3 className="text-base font-semibold text-stone-900">Word Count</h3>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 text-[#5f6368] hover:text-[#202124] rounded-full hover:bg-[#f1f3f4]"
+            className="p-1 text-stone-400 hover:text-stone-700 rounded-full hover:bg-stone-100 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="space-y-3 text-sm text-[#202124]">
-          <div className="flex justify-between">
-            <span className="text-[#5f6368]">Pages</span>
-            <span className="font-medium">{pages}</span>
+        <div className="space-y-3 text-sm text-stone-800">
+          <div className="flex justify-between items-center py-1 border-b border-stone-100">
+            <span className="text-stone-500 text-xs font-medium">Pages</span>
+            <span className="font-semibold text-stone-900">{pages}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-[#5f6368]">Words</span>
-            <span className="font-medium">{words.toLocaleString()}</span>
+          <div className="flex justify-between items-center py-1 border-b border-stone-100">
+            <span className="text-stone-500 text-xs font-medium">Words</span>
+            <span className="font-semibold text-stone-900">{words.toLocaleString()}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-[#5f6368]">Characters</span>
-            <span className="font-medium">{chars.toLocaleString()}</span>
+          <div className="flex justify-between items-center py-1 border-b border-stone-100">
+            <span className="text-stone-500 text-xs font-medium">Characters</span>
+            <span className="font-semibold text-stone-900">{chars.toLocaleString()}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-[#5f6368]">Characters excluding spaces</span>
-            <span className="font-medium">{charsNoSpaces.toLocaleString()}</span>
+          <div className="flex justify-between items-center py-1">
+            <span className="text-stone-500 text-xs font-medium">Characters (no spaces)</span>
+            <span className="font-semibold text-stone-900">{charsNoSpaces.toLocaleString()}</span>
           </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-[#dadce0] flex items-center justify-between">
-          <label className="flex items-center gap-2 text-xs text-[#5f6368] cursor-pointer">
+        <div className="mt-6 pt-4 border-t border-stone-200 flex items-center justify-between">
+          <label className="flex items-center gap-2 text-xs text-stone-600 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={displayLive}
               onChange={(e) => onToggleDisplayLive(e.target.checked)}
-              className="w-4 h-4 rounded text-[#1a73e8] focus:ring-[#1a73e8] border-[#dadce0]"
+              className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-stone-300 accent-indigo-600"
             />
-            <span>Display word count while typing</span>
+            <span>Show live count bar</span>
           </label>
 
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-1.5 bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded text-sm font-medium transition-colors shadow-xs"
+            className="px-5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium transition-colors shadow-xs"
           >
-            OK
+            Done
           </button>
         </div>
       </div>

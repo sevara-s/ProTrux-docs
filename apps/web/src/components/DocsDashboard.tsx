@@ -13,6 +13,7 @@ import {
   Edit2,
   ExternalLink,
   Menu,
+  Sparkles,
 } from 'lucide-react';
 import { DocumentMetadata, TEMPLATES, DocumentTemplate } from '@protrux/shared';
 import { useModalStore } from '@/store/modal-store';
@@ -50,53 +51,47 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-white text-[#202124] font-sans flex flex-col select-none">
-      {/* 1. Google Docs App Header */}
-      <header className="h-16 px-4 flex items-center justify-between border-b border-transparent hover:border-[#dadce0] transition-colors sticky top-0 bg-white z-30">
-        {/* Left: Hamburger + Google Docs Logo */}
+    <div className="min-h-screen bg-[#fafaf9] text-stone-900 font-sans flex flex-col select-none">
+      {/* 1. ProTrux Canvas App Header */}
+      <header className="h-16 px-6 flex items-center justify-between border-b border-stone-200/80 sticky top-0 bg-white/95 backdrop-blur-md z-30 shadow-2xs">
+        {/* Left: Brand Identity */}
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className="p-2 rounded-full hover:bg-[#f1f3f4] text-[#5f6368]"
-            title="Main menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
-          <div className="flex items-center gap-2 cursor-pointer">
-            <svg className="w-10 h-10" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M25 4H10C8.89543 4 8 4.89543 8 6V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V11L25 4Z" fill="#4285F4"/>
-              <path d="M25 4L32 11H25V4Z" fill="#A1C2FA"/>
-              <rect x="13" y="16" width="14" height="2" rx="1" fill="white"/>
-              <rect x="13" y="21" width="14" height="2" rx="1" fill="white"/>
-              <rect x="13" y="26" width="9" height="2" rx="1" fill="white"/>
-            </svg>
-            <span className="text-[22px] font-normal text-[#5f6368] tracking-tight">Docs</span>
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white shadow-xs">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-base font-bold text-stone-900 tracking-tight">ProTrux Canvas</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full border border-stone-200">
+              Workspace
+            </span>
           </div>
         </div>
 
         {/* Center: Search Bar */}
-        <div className="flex-1 max-w-2xl mx-4">
+        <div className="flex-1 max-w-xl mx-6">
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-              <Search className="w-4 h-4 text-[#5f6368] group-focus-within:text-[#1a73e8]" />
+              <Search className="w-4 h-4 text-stone-400 group-focus-within:text-indigo-600 transition-colors" />
             </div>
             <input
               type="text"
-              placeholder="Search"
+              placeholder="Search documents or templates..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-[#f1f3f4] focus:bg-white text-sm text-[#202124] rounded-lg border border-transparent focus:border-transparent focus:outline-none focus:shadow-md transition-all placeholder-[#5f6368]"
+              className="w-full pl-10 pr-12 py-2 bg-stone-100/80 focus:bg-white text-xs text-stone-800 rounded-xl border border-transparent focus:border-indigo-500/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:shadow-xs transition-all placeholder-stone-400"
             />
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <kbd className="text-[10px] text-stone-400 font-mono bg-stone-200/60 px-1.5 py-0.5 rounded">⌘K</kbd>
+            </div>
           </div>
         </div>
 
         {/* Right: User Profile Avatar */}
         <div className="flex items-center gap-3">
           <div
-            className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium text-white shadow-xs cursor-pointer"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shadow-xs cursor-pointer ring-2 ring-white"
             style={{ backgroundColor: currentUser.color }}
-            title={`Account: ${currentUser.name}`}
+            title={`Active Persona: ${currentUser.name}`}
           >
             {currentUser.name.charAt(0).toUpperCase()}
           </div>
@@ -104,18 +99,15 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
       </header>
 
       {/* 2. Template Gallery Section */}
-      <section className="bg-[#f1f3f4] border-b border-[#dadce0] py-4 px-6 md:px-12 lg:px-24">
+      <section className="bg-[#f7f6f2] border-b border-stone-200/80 py-8 px-6 md:px-12 lg:px-24">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-medium text-[#202124]">Start a new document</h2>
-            <div className="flex items-center gap-2 text-xs text-[#5f6368]">
-              <button
-                type="button"
-                className="flex items-center gap-1 hover:bg-[#e8eaed] px-2 py-1 rounded"
-              >
-                <span>Template gallery</span>
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-sm font-semibold text-stone-900 tracking-tight">Start a new document</h2>
+              <p className="text-xs text-stone-500 mt-0.5">Choose a pre-structured template or begin with a clean editorial page</p>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-stone-600">
+              <span className="text-[11px] font-medium text-stone-500">5 templates ready</span>
             </div>
           </div>
 
@@ -128,26 +120,27 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
                 className="group cursor-pointer flex flex-col"
               >
                 {/* Card preview paper */}
-                <div className="w-full aspect-[3/4] bg-white border border-[#dadce0] rounded hover:border-[#1a73e8] transition-all overflow-hidden relative shadow-2xs group-hover:shadow-md flex flex-col justify-between p-3">
+                <div className="w-full aspect-[3/4] bg-white border border-stone-200/90 rounded-xl hover:border-indigo-500 hover:shadow-md transition-all overflow-hidden relative shadow-2xs group-hover:-translate-y-0.5 flex flex-col justify-between p-3.5">
                   {tmpl.id === 'blank' ? (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center bg-transparent group-hover:scale-110 transition-transform">
-                        <Plus className="w-10 h-10 text-[#1a73e8] stroke-[1.5]" />
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600 group-hover:scale-110 transition-transform">
+                        <Plus className="w-5 h-5 stroke-[2.5]" />
                       </div>
+                      <span className="text-[11px] font-medium text-stone-500">Blank Page</span>
                     </div>
                   ) : (
                     <div className="w-full h-full flex flex-col">
                       <div
-                        className="w-full h-2 rounded-xs mb-2"
+                        className="w-full h-1.5 rounded-full mb-2.5"
                         style={{ backgroundColor: tmpl.thumbnailColor }}
                       />
-                      <div className="space-y-1.5 opacity-60">
+                      <div className="space-y-1.5 opacity-70">
                         <div className="w-3/4 h-2 bg-stone-300 rounded-xs" />
                         <div className="w-full h-1.5 bg-stone-200 rounded-xs" />
                         <div className="w-5/6 h-1.5 bg-stone-200 rounded-xs" />
                         <div className="w-4/6 h-1.5 bg-stone-200 rounded-xs" />
                       </div>
-                      <div className="mt-auto pt-2 border-t border-stone-100 flex items-center justify-between text-[9px] text-stone-400">
+                      <div className="mt-auto pt-2 border-t border-stone-100 flex items-center justify-between text-[10px] text-stone-400 font-medium">
                         <span>{tmpl.category}</span>
                       </div>
                     </div>
@@ -155,11 +148,11 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
                 </div>
 
                 {/* Card Title */}
-                <div className="mt-2">
-                  <p className="text-xs font-medium text-[#202124] group-hover:text-[#1a73e8] truncate">
+                <div className="mt-2 px-0.5">
+                  <p className="text-xs font-semibold text-stone-800 group-hover:text-indigo-600 truncate transition-colors">
                     {tmpl.name}
                   </p>
-                  <p className="text-[11px] text-[#5f6368] truncate">{tmpl.category}</p>
+                  <p className="text-[11px] text-stone-500 truncate">{tmpl.category}</p>
                 </div>
               </div>
             ))}
@@ -168,26 +161,31 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
       </section>
 
       {/* 3. Recent Documents Section */}
-      <section className="flex-1 py-6 px-6 md:px-12 lg:px-24">
+      <section className="flex-1 py-8 px-6 md:px-12 lg:px-24 bg-white">
         <div className="max-w-6xl mx-auto">
           {/* Controls bar */}
-          <div className="flex items-center justify-between mb-4 text-xs text-[#5f6368] pb-2 border-b border-[#dadce0]">
-            <h2 className="text-base font-medium text-[#202124]">Recent documents</h2>
+          <div className="flex items-center justify-between mb-6 text-xs text-stone-600 pb-3 border-b border-stone-200">
+            <div>
+              <h2 className="text-base font-bold text-stone-900 tracking-tight">Recent documents</h2>
+              <p className="text-xs text-stone-500 mt-0.5">Synced with local IndexedDB and cloud CRDT peers</p>
+            </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="flex items-center gap-1 hover:bg-[#f1f3f4] px-2 py-1 rounded"
+                onClick={() => useModalStore.getState().openModal('open-file')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-200 hover:bg-stone-50 text-xs font-medium text-stone-700 transition-colors shadow-2xs"
+                title="Import Word (.docx), Markdown (.md), HTML, or Text"
               >
-                <span>Owned by anyone</span>
-                <ChevronDown className="w-3 h-3" />
+                <Folder className="w-3.5 h-3.5 text-stone-500" />
+                <span>Import File</span>
               </button>
 
-              <div className="flex items-center gap-1 border-l border-[#dadce0] pl-3">
+              <div className="flex items-center gap-1 border-l border-stone-200 pl-3">
                 <button
                   type="button"
                   onClick={() => setViewMode('grid')}
-                  className={`p-1.5 rounded hover:bg-[#f1f3f4] ${viewMode === 'grid' ? 'text-[#1a73e8] bg-[#e8f0fe]' : ''}`}
+                  className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${viewMode === 'grid' ? 'text-indigo-600 bg-indigo-50 font-semibold' : 'text-stone-500'}`}
                   title="Grid view"
                 >
                   <Grid className="w-4 h-4" />
@@ -195,29 +193,25 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
                 <button
                   type="button"
                   onClick={() => setViewMode('list')}
-                  className={`p-1.5 rounded hover:bg-[#f1f3f4] ${viewMode === 'list' ? 'text-[#1a73e8] bg-[#e8f0fe]' : ''}`}
+                  className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${viewMode === 'list' ? 'text-indigo-600 bg-indigo-50 font-semibold' : 'text-stone-500'}`}
                   title="List view"
                 >
                   <ListIcon className="w-4 h-4" />
                 </button>
-                <button
-                  type="button"
-                  className="p-1.5 rounded hover:bg-[#f1f3f4]"
-                  title="Sort options"
-                >
-                  <ArrowUpDown className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => useModalStore.getState().openModal('open-file')}
-                  className="p-1.5 rounded hover:bg-[#f1f3f4]"
-                  title="Open file picker (Upload Word, Markdown, HTML, Text)"
-                >
-                  <Folder className="w-4 h-4" />
-                </button>
               </div>
             </div>
           </div>
+
+          {/* Empty state if search returned 0 matches */}
+          {filteredDocs.length === 0 && (
+            <div className="py-16 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-stone-100 text-stone-400 flex items-center justify-center mx-auto mb-3">
+                <FileText className="w-6 h-6" />
+              </div>
+              <p className="text-sm font-semibold text-stone-700">No documents found</p>
+              <p className="text-xs text-stone-500 mt-1">Try searching with different keywords or create a new document above.</p>
+            </div>
+          )}
 
           {/* Grid View */}
           {viewMode === 'grid' ? (
@@ -226,10 +220,10 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
                 <div
                   key={doc.id}
                   onClick={() => onSelectDocument(doc.id)}
-                  className="group bg-white border border-[#dadce0] hover:border-[#1a73e8] rounded-lg overflow-hidden cursor-pointer shadow-2xs hover:shadow-md transition-all flex flex-col"
+                  className="group bg-white border border-stone-200/90 hover:border-indigo-500 rounded-xl overflow-hidden cursor-pointer shadow-2xs hover:shadow-md transition-all flex flex-col"
                 >
                   {/* Miniature Paper View */}
-                  <div className="w-full aspect-[4/3] bg-[#fafafa] border-b border-[#dadce0] p-3 flex flex-col justify-start overflow-hidden">
+                  <div className="w-full aspect-[4/3] bg-stone-50/80 border-b border-stone-100 p-3.5 flex flex-col justify-start overflow-hidden">
                     <p className="text-[10px] text-stone-600 line-clamp-4 leading-relaxed font-sans select-none">
                       {doc.previewText || 'No text preview available. Click to open and begin writing...'}
                     </p>
@@ -237,17 +231,16 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
 
                   {/* Document Card Footer */}
                   <div className="p-3 bg-white flex items-center justify-between relative">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 40 40" fill="none">
-                        <path d="M25 4H10C8.89543 4 8 4.89543 8 6V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V11L25 4Z" fill="#4285F4"/>
-                        <path d="M25 4L32 11H25V4Z" fill="#A1C2FA"/>
-                      </svg>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-6 h-6 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                        <FileText className="w-3.5 h-3.5" />
+                      </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-[#202124] truncate group-hover:text-[#1a73e8]">
+                        <p className="text-xs font-semibold text-stone-900 truncate group-hover:text-indigo-600 transition-colors">
                           {doc.title || 'Untitled document'}
                         </p>
-                        <p className="text-[11px] text-[#5f6368]">
-                          Opened {formatRelativeTime(doc.updatedAt)}
+                        <p className="text-[11px] text-stone-400">
+                          {formatRelativeTime(doc.updatedAt)}
                         </p>
                       </div>
                     </div>
@@ -260,14 +253,14 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
                           e.stopPropagation();
                           setActiveMenuDocId(activeMenuDocId === doc.id ? null : doc.id);
                         }}
-                        className="p-1 rounded-full text-[#5f6368] hover:bg-[#f1f3f4] hover:text-[#202124]"
+                        className="p-1 rounded-md text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition-colors"
                       >
                         <MoreVertical className="w-4 h-4" />
                       </button>
 
                       {activeMenuDocId === doc.id && (
                         <div
-                          className="absolute right-0 bottom-full mb-1 w-40 bg-white rounded-md shadow-lg border border-[#dadce0] py-1 z-50 text-xs"
+                          className="absolute right-0 bottom-full mb-1 w-36 bg-white rounded-xl shadow-xl border border-stone-200/90 py-1 z-50 text-xs animate-in fade-in zoom-in-95 duration-100"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
@@ -276,9 +269,9 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
                               onSelectDocument(doc.id);
                               setActiveMenuDocId(null);
                             }}
-                            className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-[#f1f3f4] text-left"
+                            className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-stone-50 text-stone-700 text-left transition-colors"
                           >
-                            <Edit2 className="w-3.5 h-3.5 text-[#5f6368]" />
+                            <Edit2 className="w-3.5 h-3.5 text-stone-500" />
                             <span>Open</span>
                           </button>
                           <button
@@ -287,10 +280,10 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
                               onDeleteDocument(doc.id, e);
                               setActiveMenuDocId(null);
                             }}
-                            className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-[#fce8e6] text-[#d93025] text-left"
+                            className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-rose-50 text-rose-600 text-left transition-colors"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                            <span>Remove</span>
+                            <span>Delete</span>
                           </button>
                         </div>
                       )}
@@ -301,32 +294,31 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
             </div>
           ) : (
             /* List View */
-            <div className="space-y-1">
+            <div className="divide-y divide-stone-100 border border-stone-200 rounded-xl overflow-hidden bg-white shadow-2xs">
               {filteredDocs.map((doc) => (
                 <div
                   key={doc.id}
                   onClick={() => onSelectDocument(doc.id)}
-                  className="group flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[#f1f3f4] cursor-pointer transition-colors"
+                  className="group flex items-center justify-between px-4 py-3 hover:bg-stone-50 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <svg className="w-5 h-5 shrink-0" viewBox="0 0 40 40" fill="none">
-                      <path d="M25 4H10C8.89543 4 8 4.89543 8 6V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V11L25 4Z" fill="#4285F4"/>
-                      <path d="M25 4L32 11H25V4Z" fill="#A1C2FA"/>
-                    </svg>
-                    <span className="text-sm font-medium text-[#202124] truncate group-hover:text-[#1a73e8]">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-semibold text-stone-900 truncate group-hover:text-indigo-600 transition-colors">
                       {doc.title || 'Untitled document'}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-6 text-xs text-[#5f6368]">
-                    <span>{formatRelativeTime(doc.updatedAt)}</span>
+                  <div className="flex items-center gap-6 text-xs text-stone-500">
+                    <span className="text-[11px]">{formatRelativeTime(doc.updatedAt)}</span>
                     <button
                       type="button"
                       onClick={(e) => onDeleteDocument(doc.id, e)}
-                      className="p-1.5 rounded-full hover:bg-[#e8eaed] text-[#5f6368] hover:text-[#d93025]"
-                      title="Remove document"
+                      className="p-1.5 rounded-md hover:bg-rose-50 text-stone-400 hover:text-rose-600 transition-colors"
+                      title="Delete document"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>

@@ -135,7 +135,7 @@ export const Editor: React.FC<EditorProps> = ({
       ],
       editorProps: {
         attributes: {
-          class: 'google-docs-content focus:outline-none min-h-[912px] text-[#202124]',
+          class: 'editorial-content focus:outline-none min-h-[912px] text-stone-900',
           spellcheck: 'true',
         },
         handleDrop: (view, event, slice, moved) => {
@@ -225,22 +225,22 @@ export const Editor: React.FC<EditorProps> = ({
   }, [editor, crdt.docId]);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#f9fbfd] relative select-text">
-      {/* Google Docs Action Toolbar */}
+    <div className="flex-1 flex flex-col min-h-0 bg-[#f7f6f2] relative select-text">
+      {/* ProTrux Editorial Command Dock */}
       <DocsToolbar editor={editor} zoom={zoom} onZoomChange={setZoom} />
 
-      {/* Google Docs Horizontal Measurement Ruler */}
+      {/* Measurement Ruler */}
       <DocsRuler />
 
-      {/* Google Docs Infinite / Paginated Document Canvas */}
-      <div className="flex-1 overflow-y-auto overflow-x-auto py-8 px-4 flex justify-center bg-[#f9fbfd]">
+      {/* Infinite / Paginated Document Canvas */}
+      <div className="flex-1 overflow-y-auto overflow-x-auto py-8 px-4 flex justify-center bg-[#f7f6f2]">
         <div
           ref={editorRef}
           style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
           className="transition-transform duration-100 ease-out mb-16"
         >
-          {/* Authentic Google Docs A4 / Letter Paper Sheet */}
-          <div className="google-docs-paper w-[816px] min-h-[1056px] bg-white px-[72px] py-[72px] relative">
+          {/* ProTrux Editorial Paper Sheet */}
+          <div className="editorial-paper w-[816px] min-h-[1056px] bg-white px-[72px] py-[72px] relative">
             <EditorContent editor={editor} />
           </div>
         </div>
@@ -248,11 +248,11 @@ export const Editor: React.FC<EditorProps> = ({
 
       {/* Floating Word Count Telemetry Pill (when toggled in Word Count dialog) */}
       {displayLiveWordCount && (
-        <div className="fixed bottom-4 left-6 z-40 bg-white/95 backdrop-blur border border-[#dadce0] rounded-lg px-3 py-1.5 shadow-md text-xs text-[#5f6368] flex items-center gap-3">
+        <div className="fixed bottom-5 left-6 z-40 bg-stone-900/90 text-stone-100 backdrop-blur-md border border-stone-700/60 rounded-full px-4 py-1.5 shadow-xl text-xs flex items-center gap-3 font-medium">
           <span><strong>{stats.words}</strong> words</span>
-          <span>·</span>
-          <span><strong>{stats.chars}</strong> characters</span>
-          <span>·</span>
+          <span className="text-stone-500">·</span>
+          <span><strong>{stats.chars}</strong> chars</span>
+          <span className="text-stone-500">·</span>
           <span>Page <strong>1</strong> of {stats.pages}</span>
         </div>
       )}

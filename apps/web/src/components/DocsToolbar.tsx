@@ -208,14 +208,14 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
           e.preventDefault();
         }
       }}
-      className="bg-[#edf2fa] rounded-full mx-4 my-1.5 px-3 py-1 flex items-center gap-0.5 text-[#202124] text-xs shadow-2xs select-none sticky top-14 z-20 overflow-visible"
+      className="bg-white/95 backdrop-blur-md border border-stone-200/90 rounded-full mx-auto max-w-5xl my-2 px-3.5 py-1.5 flex items-center gap-0.5 text-stone-700 text-xs shadow-xs select-none sticky top-14 z-20 overflow-visible transition-all"
     >
       {/* Undo */}
       <button
         type="button"
         onClick={() => editor.chain().focus().undo().run()}
         disabled={!editor.can().undo()}
-        className="p-1.5 rounded-full hover:bg-[#dfe4ea] disabled:opacity-30"
+        className="p-1.5 rounded-md hover:bg-stone-100 text-stone-700 transition-colors disabled:opacity-30"
         title="Undo (Ctrl+Z)"
       >
         <Undo2 className="w-4 h-4" />
@@ -226,7 +226,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
         type="button"
         onClick={() => editor.chain().focus().redo().run()}
         disabled={!editor.can().redo()}
-        className="p-1.5 rounded-full hover:bg-[#dfe4ea] disabled:opacity-30"
+        className="p-1.5 rounded-md hover:bg-stone-100 text-stone-700 transition-colors disabled:opacity-30"
         title="Redo (Ctrl+Y)"
       >
         <Redo2 className="w-4 h-4" />
@@ -236,7 +236,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       <button
         type="button"
         onClick={() => window.print()}
-        className="p-1.5 rounded-full hover:bg-[#dfe4ea]"
+        className="p-1.5 rounded-md hover:bg-stone-100 text-stone-700 transition-colors"
         title="Print (Ctrl+P)"
       >
         <Printer className="w-4 h-4" />
@@ -245,7 +245,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       {/* Spellcheck */}
       <button
         type="button"
-        className="p-1.5 rounded-full hover:bg-[#dfe4ea]"
+        className="p-1.5 rounded-md hover:bg-stone-100 text-stone-700 transition-colors"
         title="Spelling and grammar check"
       >
         <CheckCheck className="w-4 h-4" />
@@ -254,7 +254,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       {/* Paint format */}
       <button
         type="button"
-        className="p-1.5 rounded-full hover:bg-[#dfe4ea]"
+        className="p-1.5 rounded-md hover:bg-stone-100 text-stone-700 transition-colors"
         title="Paint format"
       >
         <Paintbrush className="w-4 h-4" />
@@ -265,19 +265,19 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
         <button
           type="button"
           onClick={() => setActiveDropdown(activeDropdown === 'zoom' ? null : 'zoom')}
-          className="flex items-center gap-1 px-2 py-1 rounded hover:bg-[#dfe4ea] font-medium"
+          className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-stone-100 text-stone-700 font-medium transition-colors"
         >
           <span>{zoom}%</span>
-          <ChevronDown className="w-3 h-3 text-[#5f6368]" />
+          <ChevronDown className="w-3 h-3 text-stone-400" />
         </button>
         {activeDropdown === 'zoom' && (
-          <div className="absolute left-0 mt-1 w-24 bg-white rounded shadow-md border border-[#dadce0] py-1 z-50">
+          <div className="absolute left-0 mt-1.5 w-24 bg-white rounded-xl shadow-xl border border-stone-200/90 py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
             {[50, 75, 90, 100, 125, 150].map((z) => (
               <button
                 key={z}
                 type="button"
                 onClick={() => { onZoomChange(z); setActiveDropdown(null); }}
-                className="w-full px-3 py-1 text-left hover:bg-[#f1f3f4]"
+                className="w-full px-3 py-1 text-left hover:bg-stone-100 text-stone-700 text-xs transition-colors"
               >
                 {z}%
               </button>
@@ -286,49 +286,49 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
         )}
       </div>
 
-      <div className="w-[1px] h-5 bg-[#dadce0] mx-1" />
+      <div className="w-[1px] h-4 bg-stone-200 mx-1 shrink-0" />
 
       {/* Styles Dropdown (Normal text / Headings) */}
       <div className="relative">
         <button
           type="button"
           onClick={() => setActiveDropdown(activeDropdown === 'styles' ? null : 'styles')}
-          className="flex items-center justify-between w-28 px-2 py-1 rounded hover:bg-[#dfe4ea] font-medium truncate"
+          className="flex items-center justify-between w-28 px-2 py-1 rounded-md hover:bg-stone-100 text-stone-700 font-medium truncate transition-colors"
         >
           <span className="truncate">{currentStyleLabel()}</span>
-          <ChevronDown className="w-3 h-3 text-[#5f6368] shrink-0 ml-1" />
+          <ChevronDown className="w-3 h-3 text-stone-400 shrink-0 ml-1" />
         </button>
         {activeDropdown === 'styles' && (
-          <div className="absolute left-0 mt-1 w-44 bg-white rounded shadow-md border border-[#dadce0] py-1 z-50">
+          <div className="absolute left-0 mt-1.5 w-44 bg-white rounded-xl shadow-xl border border-stone-200/90 py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
             {STYLES.map((st) => (
               <button
                 key={st.label}
                 type="button"
                 onClick={() => { st.command(editor); setActiveDropdown(null); }}
-                className="w-full px-3 py-1.5 text-left hover:bg-[#f1f3f4] flex items-center justify-between"
+                className="w-full px-3 py-1.5 text-left hover:bg-stone-100 text-stone-700 text-xs transition-colors flex items-center justify-between"
               >
                 <span>{st.label}</span>
-                {st.isActive(editor) && <span className="text-[#1a73e8]">✓</span>}
+                {st.isActive(editor) && <span className="text-indigo-600 font-bold">✓</span>}
               </button>
             ))}
           </div>
         )}
       </div>
 
-      <div className="w-[1px] h-5 bg-[#dadce0] mx-1" />
+      <div className="w-[1px] h-4 bg-stone-200 mx-1 shrink-0" />
 
       {/* Font Family Selector */}
       <div className="relative">
         <button
           type="button"
           onClick={() => setActiveDropdown(activeDropdown === 'font' ? null : 'font')}
-          className="flex items-center justify-between w-24 px-2 py-1 rounded hover:bg-[#dfe4ea] font-medium truncate"
+          className="flex items-center justify-between w-24 px-2 py-1 rounded-md hover:bg-stone-100 text-stone-700 font-medium truncate transition-colors"
         >
-          <span className="truncate">Arial</span>
-          <ChevronDown className="w-3 h-3 text-[#5f6368] shrink-0 ml-1" />
+          <span className="truncate">Inter</span>
+          <ChevronDown className="w-3 h-3 text-stone-400 shrink-0 ml-1" />
         </button>
         {activeDropdown === 'font' && (
-          <div className="absolute left-0 mt-1 w-40 bg-white rounded shadow-md border border-[#dadce0] py-1 z-50">
+          <div className="absolute left-0 mt-1.5 w-40 bg-white rounded-xl shadow-xl border border-stone-200/90 py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
             {FONTS.map((f) => (
               <button
                 key={f.name}
@@ -338,7 +338,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
                   setActiveDropdown(null);
                 }}
                 style={{ fontFamily: f.value }}
-                className="w-full px-3 py-1.5 text-left hover:bg-[#f1f3f4]"
+                className="w-full px-3 py-1.5 text-left hover:bg-stone-100 text-stone-700 text-xs transition-colors"
               >
                 {f.name}
               </button>
@@ -347,7 +347,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
         )}
       </div>
 
-      <div className="w-[1px] h-5 bg-[#dadce0] mx-1" />
+      <div className="w-[1px] h-4 bg-stone-200 mx-1 shrink-0" />
 
       {/* Font Size Selector (- 11 +) */}
       <div className="flex items-center">
@@ -355,7 +355,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => handleFontSizeChange(-1)}
-          className="p-1 rounded hover:bg-[#dfe4ea]"
+          className="p-1 rounded hover:bg-stone-100 text-stone-600 transition-colors"
           title="Decrease font size"
         >
           <Minus className="w-3 h-3" />
@@ -372,27 +372,27 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
               editor?.chain().focus().run();
             }
           }}
-          className="w-7 text-center bg-white border border-[#dadce0] rounded px-0.5 py-0.5 text-xs mx-0.5 outline-none font-medium"
+          className="w-7 text-center bg-stone-50 border border-stone-200 rounded px-0.5 py-0.5 text-xs mx-0.5 outline-none font-medium text-stone-800 focus:border-indigo-500 focus:bg-white"
         />
         <button
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => handleFontSizeChange(1)}
-          className="p-1 rounded hover:bg-[#dfe4ea]"
+          className="p-1 rounded hover:bg-stone-100 text-stone-600 transition-colors"
           title="Increase font size"
         >
           <Plus className="w-3 h-3" />
         </button>
       </div>
 
-      <div className="w-[1px] h-5 bg-[#dadce0] mx-1" />
+      <div className="w-[1px] h-4 bg-stone-200 mx-1 shrink-0" />
 
       {/* Bold */}
       <button
         type="button"
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => editor.chain().focus().toggleBold().run()}
-        className={`p-1.5 rounded hover:bg-[#dfe4ea] ${editor.isActive('bold') ? 'bg-[#d3e3fd] text-[#041e49]' : ''}`}
+        className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${editor.isActive('bold') ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-stone-700'}`}
         title="Bold (Ctrl+B)"
       >
         <Bold className="w-4 h-4 stroke-[2.5]" />
@@ -403,7 +403,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
         type="button"
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => editor.chain().focus().toggleItalic().run()}
-        className={`p-1.5 rounded hover:bg-[#dfe4ea] ${editor.isActive('italic') ? 'bg-[#d3e3fd] text-[#041e49]' : ''}`}
+        className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${editor.isActive('italic') ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-stone-700'}`}
         title="Italic (Ctrl+I)"
       >
         <Italic className="w-4 h-4" />
@@ -414,7 +414,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
         type="button"
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => editor.chain().focus().toggleUnderline().run()}
-        className={`p-1.5 rounded hover:bg-[#dfe4ea] ${editor.isActive('underline') ? 'bg-[#d3e3fd] text-[#041e49]' : ''}`}
+        className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${editor.isActive('underline') ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-stone-700'}`}
         title="Underline (Ctrl+U)"
       >
         <UnderlineIcon className="w-4 h-4" />
@@ -426,7 +426,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setActiveDropdown(activeDropdown === 'color' ? null : 'color')}
-          className={`p-1.5 rounded hover:bg-[#dfe4ea] flex flex-col items-center ${activeDropdown === 'color' ? 'bg-[#d3e3fd]' : ''}`}
+          className={`p-1.5 rounded-md hover:bg-stone-100 flex flex-col items-center transition-colors ${activeDropdown === 'color' ? 'bg-indigo-50 text-indigo-600' : 'text-stone-700'}`}
           title="Text color"
         >
           <span className="font-bold text-xs leading-none">A</span>
@@ -435,15 +435,15 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
         {activeDropdown === 'color' && (
           <div
             onMouseDown={(e) => e.preventDefault()}
-            className="absolute left-0 mt-1 p-2 bg-white rounded shadow-lg border border-[#dadce0] z-50 w-52"
+            className="absolute left-0 mt-1.5 p-2 bg-white rounded-xl shadow-xl border border-stone-200/90 z-50 w-52 animate-in fade-in zoom-in-95 duration-100"
           >
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] text-[#5f6368] font-bold tracking-wider">TEXT COLOR</span>
+              <span className="text-[10px] text-stone-500 font-bold tracking-wider">TEXT COLOR</span>
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={handleResetColor}
-                className="text-[10px] text-[#1a73e8] hover:underline font-medium cursor-pointer"
+                className="text-[10px] text-indigo-600 hover:underline font-semibold cursor-pointer"
               >
                 Reset
               </button>
@@ -455,14 +455,14 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleApplyColor(c)}
-                  className={`w-4 h-4 rounded-full border border-black/15 hover:scale-125 transition-transform ${textColor.toLowerCase() === c.toLowerCase() ? 'ring-2 ring-[#1a73e8] ring-offset-1' : ''}`}
+                  className={`w-4 h-4 rounded-full border border-black/15 hover:scale-125 transition-transform ${textColor.toLowerCase() === c.toLowerCase() ? 'ring-2 ring-indigo-600 ring-offset-1' : ''}`}
                   style={{ backgroundColor: c }}
                   title={c}
                 />
               ))}
             </div>
-            <div className="pt-1.5 border-t border-[#dadce0] flex items-center justify-between">
-              <span className="text-[10px] text-[#5f6368] font-medium">Custom color:</span>
+            <div className="pt-1.5 border-t border-stone-200 flex items-center justify-between">
+              <span className="text-[10px] text-stone-500 font-medium">Custom color:</span>
               <input
                 type="color"
                 value={textColor}
@@ -481,7 +481,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setActiveDropdown(activeDropdown === 'highlight' ? null : 'highlight')}
-          className={`p-1.5 rounded hover:bg-[#dfe4ea] flex flex-col items-center ${activeDropdown === 'highlight' ? 'bg-[#d3e3fd]' : ''}`}
+          className={`p-1.5 rounded-md hover:bg-stone-100 flex flex-col items-center transition-colors ${activeDropdown === 'highlight' ? 'bg-indigo-50 text-indigo-600' : 'text-stone-700'}`}
           title="Highlight color"
         >
           <Highlighter className="w-4 h-4" />
@@ -490,15 +490,15 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
         {activeDropdown === 'highlight' && (
           <div
             onMouseDown={(e) => e.preventDefault()}
-            className="absolute left-0 mt-1 p-2 bg-white rounded shadow-lg border border-[#dadce0] z-50 w-52"
+            className="absolute left-0 mt-1.5 p-2 bg-white rounded-xl shadow-xl border border-stone-200/90 z-50 w-52 animate-in fade-in zoom-in-95 duration-100"
           >
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] text-[#5f6368] font-bold tracking-wider">HIGHLIGHT COLOR</span>
+              <span className="text-[10px] text-stone-500 font-bold tracking-wider">HIGHLIGHT COLOR</span>
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={handleResetHighlight}
-                className="text-[10px] text-[#1a73e8] hover:underline font-medium cursor-pointer"
+                className="text-[10px] text-indigo-600 hover:underline font-semibold cursor-pointer"
               >
                 None
               </button>
@@ -510,14 +510,14 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleApplyHighlight(c)}
-                  className={`w-4 h-4 rounded-xs border border-black/15 hover:scale-125 transition-transform ${highlightColor.toLowerCase() === c.toLowerCase() ? 'ring-2 ring-[#1a73e8] ring-offset-1' : ''}`}
+                  className={`w-4 h-4 rounded-xs border border-black/15 hover:scale-125 transition-transform ${highlightColor.toLowerCase() === c.toLowerCase() ? 'ring-2 ring-indigo-600 ring-offset-1' : ''}`}
                   style={{ backgroundColor: c }}
                   title={c}
                 />
               ))}
             </div>
-            <div className="pt-1.5 border-t border-[#dadce0] flex items-center justify-between">
-              <span className="text-[10px] text-[#5f6368] font-medium">Custom highlight:</span>
+            <div className="pt-1.5 border-t border-stone-200 flex items-center justify-between">
+              <span className="text-[10px] text-stone-500 font-medium">Custom highlight:</span>
               <input
                 type="color"
                 value={highlightColor}
@@ -530,7 +530,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
         )}
       </div>
 
-      <div className="w-[1px] h-5 bg-[#dadce0] mx-1" />
+      <div className="w-[1px] h-4 bg-stone-200 mx-1 shrink-0" />
 
       {/* Insert Link */}
       <button
@@ -539,7 +539,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
           const url = window.prompt('Enter link URL:');
           if (url) (editor.chain().focus() as any).setLink({ href: url }).run();
         }}
-        className="p-1.5 rounded hover:bg-[#dfe4ea]"
+        className="p-1.5 rounded-md hover:bg-stone-100 text-stone-700 transition-colors"
         title="Insert link (Ctrl+K)"
       >
         <LinkIcon className="w-4 h-4" />
@@ -548,7 +548,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       {/* Add comment */}
       <button
         type="button"
-        className="p-1.5 rounded hover:bg-[#dfe4ea]"
+        className="p-1.5 rounded-md hover:bg-stone-100 text-stone-700 transition-colors"
         title="Add comment"
       >
         <MessageSquarePlus className="w-4 h-4" />
@@ -581,24 +581,24 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
         <button
           type="button"
           onClick={() => setActiveDropdown(activeDropdown === 'image' ? null : 'image')}
-          className="p-1.5 rounded hover:bg-[#dfe4ea] flex items-center gap-0.5"
+          className="p-1.5 rounded-md hover:bg-stone-100 text-stone-700 flex items-center gap-0.5 transition-colors"
           title="Insert image"
         >
           <ImageIcon className="w-4 h-4" />
-          <ChevronDown className="w-2.5 h-2.5 text-[#5f6368]" />
+          <ChevronDown className="w-2.5 h-2.5 text-stone-400" />
         </button>
 
         {activeDropdown === 'image' && (
-          <div className="absolute left-0 mt-1 w-48 bg-white rounded shadow-lg border border-[#dadce0] py-1 z-50 text-xs">
+          <div className="absolute left-0 mt-1.5 w-48 bg-white rounded-xl shadow-xl border border-stone-200/90 py-1 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
             <button
               type="button"
               onClick={() => {
                 document.getElementById('toolbar-image-upload')?.click();
                 setActiveDropdown(null);
               }}
-              className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-[#f1f3f4] text-left"
+              className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-stone-100 text-stone-700 text-left transition-colors"
             >
-              <ImageIcon className="w-3.5 h-3.5 text-[#5f6368]" />
+              <ImageIcon className="w-3.5 h-3.5 text-stone-500" />
               <span>Upload from computer</span>
             </button>
             <button
@@ -610,22 +610,22 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
                 }
                 setActiveDropdown(null);
               }}
-              className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-[#f1f3f4] text-left"
+              className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-stone-100 text-stone-700 text-left transition-colors"
             >
-              <LinkIcon className="w-3.5 h-3.5 text-[#5f6368]" />
+              <LinkIcon className="w-3.5 h-3.5 text-stone-500" />
               <span>By URL</span>
             </button>
           </div>
         )}
       </div>
 
-      <div className="w-[1px] h-5 bg-[#dadce0] mx-1" />
+      <div className="w-[1px] h-4 bg-stone-200 mx-1 shrink-0" />
 
       {/* Align Left */}
       <button
         type="button"
         onClick={() => editor.chain().focus().setTextAlign('left').run()}
-        className={`p-1.5 rounded hover:bg-[#dfe4ea] ${editor.isActive({ textAlign: 'left' }) ? 'bg-[#d3e3fd]' : ''}`}
+        className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${editor.isActive({ textAlign: 'left' }) ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-stone-700'}`}
         title="Align left"
       >
         <AlignLeft className="w-4 h-4" />
@@ -635,7 +635,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       <button
         type="button"
         onClick={() => editor.chain().focus().setTextAlign('center').run()}
-        className={`p-1.5 rounded hover:bg-[#dfe4ea] ${editor.isActive({ textAlign: 'center' }) ? 'bg-[#d3e3fd]' : ''}`}
+        className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${editor.isActive({ textAlign: 'center' }) ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-stone-700'}`}
         title="Align center"
       >
         <AlignCenter className="w-4 h-4" />
@@ -645,7 +645,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       <button
         type="button"
         onClick={() => editor.chain().focus().setTextAlign('right').run()}
-        className={`p-1.5 rounded hover:bg-[#dfe4ea] ${editor.isActive({ textAlign: 'right' }) ? 'bg-[#d3e3fd]' : ''}`}
+        className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${editor.isActive({ textAlign: 'right' }) ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-stone-700'}`}
         title="Align right"
       >
         <AlignRight className="w-4 h-4" />
@@ -655,19 +655,19 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       <button
         type="button"
         onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-        className={`p-1.5 rounded hover:bg-[#dfe4ea] ${editor.isActive({ textAlign: 'justify' }) ? 'bg-[#d3e3fd]' : ''}`}
+        className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${editor.isActive({ textAlign: 'justify' }) ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-stone-700'}`}
         title="Justify"
       >
         <AlignJustify className="w-4 h-4" />
       </button>
 
-      <div className="w-[1px] h-5 bg-[#dadce0] mx-1" />
+      <div className="w-[1px] h-4 bg-stone-200 mx-1 shrink-0" />
 
       {/* Checklist */}
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleTaskList().run()}
-        className={`p-1.5 rounded hover:bg-[#dfe4ea] ${editor.isActive('taskList') ? 'bg-[#d3e3fd]' : ''}`}
+        className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${editor.isActive('taskList') ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-stone-700'}`}
         title="Checklist"
       >
         <CheckSquare className="w-4 h-4" />
@@ -677,7 +677,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleBulletList().run()}
-        className={`p-1.5 rounded hover:bg-[#dfe4ea] ${editor.isActive('bulletList') ? 'bg-[#d3e3fd]' : ''}`}
+        className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${editor.isActive('bulletList') ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-stone-700'}`}
         title="Bulleted list"
       >
         <List className="w-4 h-4" />
@@ -687,7 +687,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        className={`p-1.5 rounded hover:bg-[#dfe4ea] ${editor.isActive('orderedList') ? 'bg-[#d3e3fd]' : ''}`}
+        className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${editor.isActive('orderedList') ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-stone-700'}`}
         title="Numbered list"
       >
         <ListOrdered className="w-4 h-4" />
@@ -702,7 +702,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
             chain.liftListItem('listItem').run();
           }
         }}
-        className="p-1.5 rounded hover:bg-[#dfe4ea]"
+        className="p-1.5 rounded-md hover:bg-stone-100 text-stone-700 transition-colors"
         title="Decrease indent"
       >
         <Outdent className="w-4 h-4" />
@@ -717,7 +717,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
             chain.sinkListItem('listItem').run();
           }
         }}
-        className="p-1.5 rounded hover:bg-[#dfe4ea]"
+        className="p-1.5 rounded-md hover:bg-stone-100 text-stone-700 transition-colors"
         title="Increase indent"
       >
         <Indent className="w-4 h-4" />
@@ -727,19 +727,19 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       <button
         type="button"
         onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
-        className="p-1.5 rounded hover:bg-[#dfe4ea]"
+        className="p-1.5 rounded-md hover:bg-stone-100 text-stone-700 transition-colors"
         title="Clear formatting"
       >
         <RemoveFormatting className="w-4 h-4" />
       </button>
 
-      <div className="w-[1px] h-5 bg-[#dadce0] mx-1" />
+      <div className="w-[1px] h-4 bg-stone-200 mx-1 shrink-0" />
 
       {/* Editing Mode indicator */}
-      <div className="ml-auto flex items-center gap-1 text-[#444746] px-2 py-1 rounded hover:bg-[#dfe4ea] cursor-pointer">
-        <Pencil className="w-3.5 h-3.5" />
-        <span className="font-medium hidden lg:inline">Editing</span>
-        <ChevronDown className="w-3 h-3 text-[#5f6368]" />
+      <div className="ml-auto flex items-center gap-1.5 text-stone-600 px-2.5 py-1 rounded-md hover:bg-stone-100 cursor-pointer font-medium transition-colors">
+        <Pencil className="w-3.5 h-3.5 text-stone-500" />
+        <span className="hidden lg:inline text-xs">Editing</span>
+        <ChevronDown className="w-3 h-3 text-stone-400" />
       </div>
     </div>
   );

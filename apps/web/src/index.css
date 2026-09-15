@@ -4,86 +4,95 @@
 
 @layer base {
   body {
-    font-family: Arial, Roboto, system-ui, sans-serif;
-    background-color: #f9fbfd;
-    color: #202124;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f7f6f2;
+    color: #1c1917;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Authentic Google Docs Paper Box Shadow */
-.google-docs-paper {
-  box-shadow: 0 1px 3px 1px rgba(60, 64, 67, 0.15), 0 1px 2px 0 rgba(60, 64, 67, 0.3);
-  border-radius: 1px;
+/* ProTrux Editorial Canvas Paper Elevation */
+.editorial-paper {
+  background-color: #ffffff;
+  border: 1px solid rgba(231, 229, 228, 0.85);
+  box-shadow:
+    0 1px 2px rgba(28, 25, 23, 0.02),
+    0 4px 16px -2px rgba(28, 25, 23, 0.05),
+    0 12px 32px -4px rgba(28, 25, 23, 0.04);
+  border-radius: 4px;
 }
 
-/* Google Docs Editor Typography & Structure */
+/* ProseMirror Typography & Document Hierarchy */
 .ProseMirror {
   outline: none;
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 11pt;
-  line-height: 1.5;
-  color: #202124;
+  line-height: 1.6;
+  color: #1c1917;
 }
 
 .ProseMirror p {
   margin-top: 0;
-  margin-bottom: 0.8em;
+  margin-bottom: 0.85em;
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
-  color: #80868b;
+  color: #a8a29e;
   content: attr(data-placeholder);
   float: left;
   height: 0;
   pointer-events: none;
 }
 
-/* Google Docs Headings */
+/* Editorial Headings */
 .ProseMirror h1 {
-  font-size: 20pt;
-  font-weight: 700;
+  font-size: 22pt;
+  font-weight: 800;
   line-height: 1.25;
-  margin-top: 1.2em;
-  margin-bottom: 0.3em;
-  color: #202124;
+  letter-spacing: -0.025em;
+  margin-top: 1.4em;
+  margin-bottom: 0.4em;
+  color: #0c0a09;
 }
 
 .ProseMirror h2 {
   font-size: 16pt;
   font-weight: 700;
   line-height: 1.3;
-  margin-top: 1em;
-  margin-bottom: 0.25em;
-  color: #202124;
+  letter-spacing: -0.015em;
+  margin-top: 1.2em;
+  margin-bottom: 0.35em;
+  color: #1c1917;
 }
 
 .ProseMirror h3 {
-  font-size: 14pt;
-  font-weight: 700;
+  font-size: 13.5pt;
+  font-weight: 600;
   line-height: 1.35;
-  margin-top: 0.9em;
-  margin-bottom: 0.2em;
-  color: #434343;
+  margin-top: 1em;
+  margin-bottom: 0.3em;
+  color: #44403c;
 }
 
 /* Lists */
 .ProseMirror ul {
   list-style-type: disc;
-  padding-left: 2rem;
+  padding-left: 1.75rem;
   margin-top: 0.4em;
-  margin-bottom: 0.4em;
+  margin-bottom: 0.5em;
 }
 
 .ProseMirror ol {
   list-style-type: decimal;
-  padding-left: 2rem;
+  padding-left: 1.75rem;
   margin-top: 0.4em;
-  margin-bottom: 0.4em;
+  margin-bottom: 0.5em;
 }
 
 .ProseMirror li {
-  margin-top: 0.2em;
-  margin-bottom: 0.2em;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
 }
 
 /* Task Checklists */
@@ -91,18 +100,18 @@ ul[data-type="taskList"] {
   list-style: none;
   padding: 0;
   margin-top: 0.5em;
-  margin-bottom: 0.5em;
+  margin-bottom: 0.6em;
 }
 
 ul[data-type="taskList"] li {
   display: flex;
   align-items: flex-start;
-  margin-bottom: 0.3em;
+  margin-bottom: 0.35em;
 }
 
 ul[data-type="taskList"] li > label {
   flex: 0 0 auto;
-  margin-right: 0.5rem;
+  margin-right: 0.6rem;
   user-select: none;
   margin-top: 0.2rem;
 }
@@ -115,52 +124,56 @@ ul[data-type="taskList"] input[type="checkbox"] {
   cursor: pointer;
   width: 1.05rem;
   height: 1.05rem;
-  border-radius: 2px;
-  accent-color: #1a73e8;
+  border-radius: 4px;
+  accent-color: #4f46e5;
 }
 
-/* Blockquote */
+/* Editorial Blockquote */
 .ProseMirror blockquote {
-  border-left: 3px solid #1a73e8;
-  padding-left: 1rem;
+  border-left: 3px solid #6366f1;
+  background-color: rgba(99, 102, 241, 0.04);
+  padding: 0.6rem 1rem;
+  border-radius: 0 6px 6px 0;
   font-style: italic;
-  color: #5f6368;
-  margin: 1em 0;
+  color: #44403c;
+  margin: 1.1em 0;
 }
 
 /* Code & Pre */
 .ProseMirror code {
-  background-color: #f1f3f4;
-  color: #202124;
-  padding: 0.15rem 0.3rem;
-  border-radius: 3px;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 0.9em;
+  background-color: #f5f5f4;
+  color: #4f46e5;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: 0.88em;
+  border: 1px solid #e7e5e4;
 }
 
 .ProseMirror pre {
-  background: #f8f9fa;
-  border: 1px solid #dadce0;
-  color: #202124;
-  font-family: 'Courier New', Courier, monospace;
-  padding: 0.75rem 1rem;
-  border-radius: 4px;
+  background: #18181b;
+  border: 1px solid #27272a;
+  color: #f4f4f5;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  padding: 0.85rem 1.1rem;
+  border-radius: 8px;
   overflow-x: auto;
-  margin: 1em 0;
+  margin: 1.2em 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .ProseMirror hr {
   border: none;
-  border-top: 1px solid #dadce0;
-  margin: 1.5rem 0;
+  border-top: 1px solid #e7e5e4;
+  margin: 1.75rem 0;
 }
 
-/* Google Docs Collaborative Cursors */
+/* ProTrux Collaborative Cursors */
 .collaboration-cursor__caret {
   position: relative;
   margin-left: -1px;
   margin-right: -1px;
-  border-left: 2px solid #1a73e8;
+  border-left: 2px solid #4f46e5;
   border-right: 0;
   word-break: normal;
   pointer-events: none;
@@ -168,21 +181,34 @@ ul[data-type="taskList"] input[type="checkbox"] {
 
 .collaboration-cursor__label {
   position: absolute;
-  top: -1.35em;
+  top: -1.45em;
   left: -1px;
   font-size: 10px;
   font-style: normal;
-  font-weight: 500;
+  font-weight: 600;
   line-height: normal;
+  letter-spacing: 0.02em;
   user-select: none;
   color: #ffffff;
-  padding: 1px 5px;
-  border-radius: 3px;
+  padding: 1.5px 6px;
+  border-radius: 4px;
   border-bottom-left-radius: 0;
   white-space: nowrap;
   pointer-events: none;
-  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
   z-index: 10;
+  animation: cursorFadeIn 0.15s ease-out;
+}
+
+@keyframes cursorFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Print page styles */
@@ -193,8 +219,9 @@ ul[data-type="taskList"] input[type="checkbox"] {
   header, .DocsToolbar, .DocsRuler, footer, .offline-banner {
     display: none !important;
   }
-  .google-docs-paper {
+  .editorial-paper {
     box-shadow: none !important;
+    border: none !important;
     width: 100% !important;
     padding: 0 !important;
   }

@@ -140,8 +140,8 @@ export const App: React.FC = () => {
 
   // Google Docs Editor View
   return (
-    <ErrorBoundary fallbackTitle="Google Docs Editor Error">
-      <div className="flex h-screen w-screen overflow-hidden bg-[#f9fbfd] flex-col font-sans select-none">
+    <ErrorBoundary fallbackTitle="ProTrux Canvas Editor Error">
+      <div className="flex h-screen w-screen overflow-hidden bg-[#f7f6f2] flex-col font-sans select-none">
       {/* Google Docs Top Header & Menus */}
       <DocsHeader
         editor={editorInstance}

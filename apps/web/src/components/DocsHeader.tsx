@@ -13,11 +13,22 @@ import {
   Download,
   Plus,
   Printer,
+  Sparkles,
+  ChevronDown,
+  Check,
+  Users,
 } from 'lucide-react';
 import { Editor } from '@tiptap/react';
 import { useModal, useModalStore } from '@/store/modal-store';
 import { useUserStore } from '@/store/user-store';
 import { useDocumentStore } from '@/store/document-store';
+
+export const DEMO_PERSONAS = [
+  { name: 'Elena Rostova', color: '#8b5cf6', role: 'Lead Author' },
+  { name: 'Marcus Vance', color: '#10b981', role: 'Backend Architect' },
+  { name: 'Liam Chen', color: '#0ea5e9', role: 'Staff Engineer' },
+  { name: 'Sophia Lin', color: '#f59e0b', role: 'Product Designer' },
+];
 
 interface DocsHeaderProps {
   editor: Editor | null;
@@ -37,6 +48,7 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
   const updateDocTitle = useDocumentStore((state) => state.updateDocTitle);
 
   const currentUser = useUserStore((state) => state.currentUser);
+  const setCurrentUser = useUserStore((state) => state.setCurrentUser);
   const collaborators = useUserStore((state) => state.collaborators);
   const syncStatus = useUserStore((state) => state.syncStatus);
   const isSimulatedOffline = useUserStore((state) => state.isSimulatedOffline);
@@ -119,51 +131,58 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
     if (isSimulatedOffline || syncStatus === 'offline') {
       return (
         <div
-          className="flex items-center gap-1 text-xs text-[#d93025] cursor-pointer"
-          title="Working offline. Edits saved locally to IndexedDB."
+          className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] bg-amber-50 text-amber-800 border border-amber-200/80 font-medium"
+          title="Offline mode active. All keystrokes saved to browser IndexedDB."
         >
-          <CloudOff className="w-4 h-4" />
-          <span className="hidden md:inline font-medium">Offline (saved locally)</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+          <span>Offline (IndexedDB active)</span>
         </div>
       );
     }
 
     if (syncStatus === 'syncing') {
       return (
-        <div className="flex items-center gap-1 text-xs text-[#5f6368]" title="Saving changes to cloud...">
-          <Cloud className="w-4 h-4 animate-pulse text-[#1a73e8]" />
-          <span className="hidden md:inline">Saving...</span>
+        <div
+          className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium"
+          title="Syncing CRDT state vectors over WebSocket..."
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-ping"></span>
+          <span>Syncing...</span>
         </div>
       );
     }
 
     return (
-      <div className="flex items-center gap-1 text-xs text-[#5f6368]" title="Document status: Saved to cloud & SQLite">
-        <Cloud className="w-4 h-4 text-[#5f6368]" />
-        <span className="hidden md:inline">Saved to Drive</span>
+      <div
+        className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-medium"
+        title="Document is synchronized with SQLite & WebSocket hub"
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        <span>Saved to Cloud</span>
       </div>
     );
   };
 
   return (
-    <header className="bg-white border-b border-[#dadce0] px-4 pt-2 pb-1 select-none sticky top-0 z-30">
+    <header className="bg-white/95 backdrop-blur-md border-b border-stone-200/80 px-4 py-2 select-none sticky top-0 z-30 shadow-2xs">
       <div className="flex items-center justify-between">
-        {/* Left: Google Docs Logo + Title + Menus */}
-        <div className="flex items-start gap-3 min-w-0">
+        {/* Left: ProTrux Brand Logo + Title + Menus */}
+        <div className="flex items-center gap-3 min-w-0">
           <button
             type="button"
             onClick={onNavigateHome}
-            className="mt-0.5 group focus:outline-none"
-            title="Docs home"
+            className="flex items-center gap-2 group focus:outline-none shrink-0"
+            title="ProTrux Canvas Home"
           >
-            <svg className="w-9 h-9" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M25 4H10C8.89543 4 8 4.89543 8 6V34C8 35.1046 8.89543 36 10 36H30C31.1046 36 32 35.1046 32 34V11L25 4Z" fill="#4285F4"/>
-              <path d="M25 4L32 11H25V4Z" fill="#A1C2FA"/>
-              <rect x="13" y="16" width="14" height="2" rx="1" fill="white"/>
-              <rect x="13" y="21" width="14" height="2" rx="1" fill="white"/>
-              <rect x="13" y="26" width="9" height="2" rx="1" fill="white"/>
-            </svg>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
+              <Sparkles className="w-4 h-4 text-indigo-100" />
+            </div>
+            <span className="font-bold text-sm tracking-tight text-stone-900 hidden sm:inline">
+              ProTrux<span className="text-indigo-600 font-semibold ml-0.5">Canvas</span>
+            </span>
           </button>
+
+          <div className="w-[1px] h-6 bg-stone-200 mx-1 hidden sm:block" />
 
           <div className="flex flex-col min-w-0">
             {/* Document Title & Meta actions */}
@@ -182,13 +201,13 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
                       setIsEditingTitle(false);
                     }
                   }}
-                  className="text-lg font-medium text-[#202124] px-1 py-0 border border-[#1a73e8] rounded outline-none ring-2 ring-[#e8f0fe] bg-white min-w-[160px]"
+                  className="text-base font-semibold text-stone-900 px-2 py-0.5 border border-indigo-500 rounded-md outline-none ring-2 ring-indigo-100 bg-white min-w-[160px]"
                 />
               ) : (
                 <span
                   onClick={() => setIsEditingTitle(true)}
-                  className="text-lg font-medium text-[#202124] hover:border hover:border-[#dadce0] px-1 py-0 rounded cursor-pointer truncate max-w-sm md:max-w-md"
-                  title="Rename"
+                  className="text-base font-semibold text-stone-900 hover:bg-stone-100 px-2 py-0.5 rounded-md cursor-pointer truncate max-w-sm md:max-w-md tracking-tight transition-colors"
+                  title="Click to rename"
                 >
                   {title || 'Untitled document'}
                 </span>
@@ -198,29 +217,29 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setIsStarred(!isStarred)}
-                className={`p-1 rounded-full hover:bg-[#f1f3f4] transition-colors ${
-                  isStarred ? 'text-[#fbbc04]' : 'text-[#5f6368]'
+                className={`p-1 rounded-md hover:bg-stone-100 transition-colors ${
+                  isStarred ? 'text-amber-500' : 'text-stone-400 hover:text-stone-600'
                 }`}
                 title={isStarred ? 'Starred' : 'Star document'}
               >
-                <Star className="w-4 h-4 fill-current" />
+                <Star className="w-3.5 h-3.5 fill-current" />
               </button>
 
               {/* Move to folder */}
               <button
                 type="button"
-                className="p-1 text-[#5f6368] hover:text-[#202124] rounded-full hover:bg-[#f1f3f4]"
-                title="Move to folder"
+                className="p-1 text-stone-400 hover:text-stone-600 rounded-md hover:bg-stone-100"
+                title="Organize in workspace"
               >
-                <Folder className="w-4 h-4" />
+                <Folder className="w-3.5 h-3.5" />
               </button>
 
               {/* Cloud sync status indicator */}
               <div className="ml-1">{renderCloudStatus()}</div>
             </div>
 
-            {/* Google Docs Classic Menu Bar */}
-            <div className="flex items-center gap-0.5 mt-0.5 text-xs text-[#202124]" ref={menuContainerRef}>
+            {/* ProTrux Editorial Menu Bar */}
+            <div className="flex items-center gap-0.5 mt-0.5 text-xs text-stone-600" ref={menuContainerRef}>
               {/* File Menu */}
               <div className="relative">
                 <button
@@ -507,74 +526,103 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
           </div>
         </div>
 
-        {/* Right: Presence, Offline Simulator, Share Button, Profile */}
-        <div className="flex items-center gap-3">
-          {/* Offline Simulator Button */}
+        {/* Right: Persona Switcher, Offline Simulator, Collaborators, Share Button */}
+        <div className="flex items-center gap-2.5">
+          {/* 1-Click Persona Switcher for Multi-User Evaluator Testing */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setActiveMenu(activeMenu === 'persona' ? null : 'persona')}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 text-xs font-medium transition-colors"
+              title="Switch collaborator persona to test multi-user editing"
+            >
+              <span className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-black/10" style={{ backgroundColor: currentUser.color }} />
+              <span className="truncate max-w-[110px] font-semibold text-stone-800">{currentUser.name}</span>
+              <ChevronDown className="w-3 h-3 text-stone-400" />
+            </button>
+            {activeMenu === 'persona' && (
+              <div className="absolute right-0 mt-1.5 w-60 bg-white rounded-xl shadow-xl border border-stone-200 py-1.5 z-50 text-xs">
+                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-stone-400 border-b border-stone-100 mb-1">
+                  Switch Test Persona (Multi-User)
+                </div>
+                {DEMO_PERSONAS.map((p) => (
+                  <button
+                    key={p.name}
+                    type="button"
+                    onClick={() => {
+                      setCurrentUser({ name: p.name, color: p.color });
+                      setActiveMenu(null);
+                    }}
+                    className={`w-full px-3 py-2 flex items-center justify-between hover:bg-indigo-50/60 text-left transition-colors ${
+                      currentUser.name === p.name ? 'bg-indigo-50 font-semibold text-indigo-950' : 'text-stone-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-3 h-3 rounded-full shrink-0 ring-1 ring-black/10" style={{ backgroundColor: p.color }} />
+                      <div>
+                        <p className="font-medium text-xs">{p.name}</p>
+                        <p className="text-[10px] text-stone-400">{p.role}</p>
+                      </div>
+                    </div>
+                    {currentUser.name === p.name && (
+                      <span className="text-indigo-600 text-xs font-bold">Active</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Network Simulator Button */}
           <button
             type="button"
             onClick={toggleSimulatedOffline}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
               isSimulatedOffline
-                ? 'bg-[#ea4335] text-white border-[#d93025] shadow-sm font-semibold'
-                : 'bg-[#f1f3f4] text-[#3c4043] border-transparent hover:bg-[#e8eaed]'
+                ? 'bg-amber-600 text-white border-amber-700 shadow-sm font-semibold'
+                : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50 hover:border-stone-300'
             }`}
             title="Simulate network disconnect for offline evaluation"
           >
             {isSimulatedOffline ? (
               <>
                 <WifiOff className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>Restore Network</span>
+                <span>Reconnect Network</span>
               </>
             ) : (
               <>
-                <Wifi className="w-3.5 h-3.5" />
+                <Wifi className="w-3.5 h-3.5 text-stone-500" />
                 <span className="hidden sm:inline">Simulate Offline</span>
               </>
             )}
           </button>
 
-          {/* Collaborator Avatars */}
-          <div className="flex items-center -space-x-1.5">
-            {collaborators.map((c) => (
-              <div
-                key={c.id}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ring-2 ring-white shadow-xs"
-                style={{ backgroundColor: c.color }}
-                title={`Active collaborator: ${c.name}`}
-              >
-                {c.name.charAt(0).toUpperCase()}
-              </div>
-            ))}
-          </div>
+          {/* Collaborator Presence Avatars */}
+          {collaborators.length > 0 && (
+            <div className="flex items-center -space-x-1.5">
+              {collaborators.map((c) => (
+                <div
+                  key={c.id}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ring-2 ring-white shadow-xs hover:scale-110 transition-transform cursor-default"
+                  style={{ backgroundColor: c.color }}
+                  title={`Active peer: ${c.name}`}
+                >
+                  {c.name.charAt(0).toUpperCase()}
+                </div>
+              ))}
+            </div>
+          )}
 
-          {/* Activity / Comments icon */}
-          <button
-            type="button"
-            className="p-2 text-[#5f6368] hover:text-[#202124] rounded-full hover:bg-[#f1f3f4]"
-            title="Open comment history"
-          >
-            <MessageSquare className="w-5 h-5" />
-          </button>
-
-          {/* Google Docs Blue Share Button */}
+          {/* Share Button */}
           <button
             type="button"
             onClick={shareModal.openModal}
-            className="flex items-center gap-2 px-5 py-2 bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-full text-sm font-medium transition-colors shadow-xs"
-            title="Share with people"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm"
+            title="Share document link"
           >
             <Lock className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>Share</span>
           </button>
-
-          {/* Current User Avatar */}
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-xs"
-            style={{ backgroundColor: currentUser.color }}
-            title={`Signed in as: ${currentUser.name}`}
-          >
-            {currentUser.name.charAt(0).toUpperCase()}
-          </div>
         </div>
       </div>
     </header>

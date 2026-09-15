@@ -114,43 +114,43 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full flex flex-col h-[520px] border border-[#dadce0] animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 bg-stone-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col h-[520px] border border-stone-200/90 animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="px-6 py-4 flex items-center justify-between border-b border-[#dadce0]">
-          <h3 className="text-lg font-medium text-[#202124]">Open a file</h3>
+        <div className="px-6 py-4 flex items-center justify-between border-b border-stone-200">
+          <h3 className="text-base font-semibold text-stone-900">Import or Open Document</h3>
           <button
             type="button"
             onClick={closeModal}
-            className="p-1 text-[#5f6368] hover:text-[#202124] rounded-full hover:bg-[#f1f3f4]"
+            className="p-1.5 text-stone-400 hover:text-stone-700 rounded-full hover:bg-stone-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-[#dadce0] px-6 text-sm">
+        <div className="flex border-b border-stone-200 px-6 text-sm">
           <button
             type="button"
             onClick={() => setActiveTab('upload')}
-            className={`py-3 px-4 font-medium border-b-2 transition-colors ${
+            className={`py-3 px-4 font-medium border-b-2 text-xs transition-colors ${
               activeTab === 'upload'
-                ? 'border-[#1a73e8] text-[#1a73e8]'
-                : 'border-transparent text-[#5f6368] hover:text-[#202124]'
+                ? 'border-indigo-600 text-indigo-600 font-semibold'
+                : 'border-transparent text-stone-500 hover:text-stone-800'
             }`}
           >
-            Upload
+            Upload Document
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('recent')}
-            className={`py-3 px-4 font-medium border-b-2 transition-colors ${
+            className={`py-3 px-4 font-medium border-b-2 text-xs transition-colors ${
               activeTab === 'recent'
-                ? 'border-[#1a73e8] text-[#1a73e8]'
-                : 'border-transparent text-[#5f6368] hover:text-[#202124]'
+                ? 'border-indigo-600 text-indigo-600 font-semibold'
+                : 'border-transparent text-stone-500 hover:text-stone-800'
             }`}
           >
-            Recent
+            Recent Documents
           </button>
         </div>
 
@@ -163,8 +163,8 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
               onDrop={handleDrop}
               className={`w-full h-full border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-8 text-center transition-all ${
                 isDragging
-                  ? 'border-[#1a73e8] bg-[#e8f0fe]'
-                  : 'border-[#dadce0] bg-[#fafafa] hover:bg-[#f8fafd]'
+                  ? 'border-indigo-500 bg-indigo-50/50'
+                  : 'border-stone-300 bg-stone-50/60 hover:bg-stone-50'
               }`}
             >
               <input
@@ -175,28 +175,28 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
                 className="hidden"
               />
 
-              <div className="w-16 h-16 rounded-full bg-[#e8f0fe] text-[#1a73e8] flex items-center justify-center mb-4">
-                <UploadCloud className="w-8 h-8" />
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center mb-4 shadow-xs">
+                <UploadCloud className="w-7 h-7" />
               </div>
 
-              <h4 className="text-base font-medium text-[#202124] mb-1">
-                Drag a file here
+              <h4 className="text-sm font-semibold text-stone-900 mb-1">
+                Drop your document here
               </h4>
-              <p className="text-xs text-[#5f6368] mb-5">
-                Supported: <strong>Word (.docx)</strong>, <strong>Markdown (.md)</strong>, <strong>HTML (.html)</strong>, <strong>Text (.txt)</strong>
+              <p className="text-xs text-stone-500 mb-5">
+                Supported formats: <strong>Word (.docx)</strong>, <strong>Markdown (.md)</strong>, <strong>HTML (.html)</strong>, <strong>Text (.txt)</strong>
               </p>
 
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isProcessing}
-                className="px-6 py-2.5 bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-lg text-sm font-medium transition-colors shadow-xs disabled:opacity-50"
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-medium transition-colors shadow-xs disabled:opacity-50"
               >
-                {isProcessing ? 'Processing file...' : 'Browse your computer'}
+                {isProcessing ? 'Processing file...' : 'Browse files'}
               </button>
 
               {statusMessage && (
-                <p className="mt-4 text-xs font-medium text-[#1a73e8] animate-pulse">
+                <p className="mt-4 text-xs font-medium text-indigo-600 animate-pulse">
                   {statusMessage}
                 </p>
               )}
@@ -205,13 +205,13 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
             /* Recent Documents Tab */
             <div className="space-y-3">
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#5f6368]" />
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-stone-400" />
                 <input
                   type="text"
                   placeholder="Search recent files..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 border border-[#dadce0] rounded-lg text-sm focus:outline-none focus:border-[#1a73e8]"
+                  className="w-full pl-9 pr-4 py-2 border border-stone-200 bg-stone-50 rounded-xl text-xs focus:outline-none focus:border-indigo-500 focus:bg-white text-stone-800"
                 />
               </div>
 
@@ -223,15 +223,15 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
                       onOpenDocument(doc.id);
                       closeModal();
                     }}
-                    className="flex items-center justify-between p-2.5 rounded-lg hover:bg-[#f1f3f4] cursor-pointer transition-colors"
+                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-stone-100 cursor-pointer transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <FileText className="w-4 h-4 text-[#1a73e8] shrink-0" />
-                      <span className="text-sm font-medium text-[#202124] truncate">
+                      <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
+                      <span className="text-xs font-medium text-stone-900 truncate">
                         {doc.title || 'Untitled document'}
                       </span>
                     </div>
-                    <span className="text-xs text-[#5f6368]">
+                    <span className="text-[11px] text-stone-500">
                       {new Date(doc.updatedAt).toLocaleDateString()}
                     </span>
                   </div>
