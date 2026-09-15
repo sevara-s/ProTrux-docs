@@ -4,59 +4,47 @@ import {
   Folder,
   Cloud,
   CloudOff,
-  Check,
   Lock,
   MessageSquare,
-  History,
   Wifi,
   WifiOff,
-  ChevronRight,
   FileText,
   Trash2,
   Download,
-  Copy,
   Plus,
-  ArrowLeft,
   Printer,
-  FileCode,
-  Table as TableIcon,
 } from 'lucide-react';
-import { UserPresence, SyncStatus } from '@protrux/shared';
 import { Editor } from '@tiptap/react';
+import { useModal } from '@/store/modal-store';
+import { useUserStore } from '@/store/user-store';
+import { useDocumentStore } from '@/store/document-store';
 
 interface DocsHeaderProps {
-  title: string;
-  onTitleChange: (newTitle: string) => void;
-  syncStatus: SyncStatus;
-  collaborators: UserPresence[];
-  currentUser: { name: string; color: string };
-  onUpdateUser: (name: string, color: string) => void;
-  isSimulatedOffline: boolean;
-  onToggleSimulateOffline: () => void;
-  onOpenWordCount: () => void;
-  onOpenShare: () => void;
+  editor: Editor | null;
   onNavigateHome: () => void;
   onDeleteDocument: () => void;
   onNewDocument: () => void;
-  editor: Editor | null;
 }
 
 export const DocsHeader: React.FC<DocsHeaderProps> = ({
-  title,
-  onTitleChange,
-  syncStatus,
-  collaborators,
-  currentUser,
-  onUpdateUser,
-  isSimulatedOffline,
-  onToggleSimulateOffline,
-  onOpenWordCount,
-  onOpenShare,
+  editor,
   onNavigateHome,
   onDeleteDocument,
   onNewDocument,
-  editor,
 }) => {
+  const title = useDocumentStore((state) => state.currentDocTitle);
+  const currentDocId = useDocumentStore((state) => state.currentDocId);
+  const updateDocTitle = useDocumentStore((state) => state.updateDocTitle);
+
+  const currentUser = useUserStore((state) => state.currentUser);
+  const collaborators = useUserStore((state) => state.collaborators);
+  const syncStatus = useUserStore((state) => state.syncStatus);
+  const isSimulatedOffline = useUserStore((state) => state.isSimulatedOffline);
+  const toggleSimulatedOffline = useUserStore((state) => state.toggleSimulatedOffline);
+
+  const shareModal = useModal('share');
+  const wordCountModal = useModal('word-count');
+
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(title);
   const [isStarred, setIsStarred] = useState(false);
@@ -76,7 +64,6 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
     }
   }, [isEditingTitle]);
 
-  // Close open dropdown menus on outside click
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (menuContainerRef.current && !menuContainerRef.current.contains(e.target as Node)) {
@@ -91,7 +78,7 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
     setIsEditingTitle(false);
     const trimmed = titleInput.trim();
     if (trimmed && trimmed !== title) {
-      onTitleChange(trimmed);
+      updateDocTitle(currentDocId, trimmed);
     } else {
       setTitleInput(title);
     }
@@ -133,7 +120,7 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
       return (
         <div
           className="flex items-center gap-1 text-xs text-[#d93025] cursor-pointer"
-          title="Working offline. All changes are securely saved to browser IndexedDB."
+          title="Working offline. Edits saved locally to IndexedDB."
         >
           <CloudOff className="w-4 h-4" />
           <span className="hidden md:inline font-medium">Offline (saved locally)</span>
@@ -163,7 +150,6 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
       <div className="flex items-center justify-between">
         {/* Left: Google Docs Logo + Title + Menus */}
         <div className="flex items-start gap-3 min-w-0">
-          {/* Authentic Google Docs Blue Icon */}
           <button
             type="button"
             onClick={onNavigateHome}
@@ -179,7 +165,6 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
             </svg>
           </button>
 
-          {/* Title and Menu bar container */}
           <div className="flex flex-col min-w-0">
             {/* Document Title & Meta actions */}
             <div className="flex items-center gap-2">
@@ -359,7 +344,7 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
                   <div className="absolute left-0 mt-1 w-52 bg-white rounded shadow-lg border border-[#dadce0] py-1 z-50 text-xs">
                     <button
                       type="button"
-                      onClick={() => { onOpenWordCount(); setActiveMenu(null); }}
+                      onClick={() => { wordCountModal.openModal(); setActiveMenu(null); }}
                       className="w-full px-4 py-1.5 flex items-center justify-between hover:bg-[#f1f3f4] text-left"
                     >
                       <span>Word count</span>
@@ -490,7 +475,7 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
                   <div className="absolute left-0 mt-1 w-56 bg-white rounded shadow-lg border border-[#dadce0] py-1 z-50 text-xs">
                     <button
                       type="button"
-                      onClick={() => { onOpenWordCount(); setActiveMenu(null); }}
+                      onClick={() => { wordCountModal.openModal(); setActiveMenu(null); }}
                       className="w-full px-4 py-1.5 flex items-center justify-between hover:bg-[#f1f3f4] text-left"
                     >
                       <span>Word count</span>
@@ -499,7 +484,7 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
                     <div className="h-[1px] bg-[#dadce0] my-1" />
                     <button
                       type="button"
-                      onClick={() => { onToggleSimulateOffline(); setActiveMenu(null); }}
+                      onClick={() => { toggleSimulatedOffline(); setActiveMenu(null); }}
                       className="w-full px-4 py-1.5 flex items-center justify-between hover:bg-[#f1f3f4] text-left"
                     >
                       <span>{isSimulatedOffline ? 'Restore Network Connection' : 'Simulate Offline Mode'}</span>
@@ -513,10 +498,10 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
 
         {/* Right: Presence, Offline Simulator, Share Button, Profile */}
         <div className="flex items-center gap-3">
-          {/* Offline Simulator Button (Highlighted for video demo!) */}
+          {/* Offline Simulator Button */}
           <button
             type="button"
-            onClick={onToggleSimulateOffline}
+            onClick={toggleSimulatedOffline}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
               isSimulatedOffline
                 ? 'bg-[#ea4335] text-white border-[#d93025] shadow-sm font-semibold'
@@ -563,7 +548,7 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
           {/* Google Docs Blue Share Button */}
           <button
             type="button"
-            onClick={onOpenShare}
+            onClick={shareModal.openModal}
             className="flex items-center gap-2 px-5 py-2 bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-full text-sm font-medium transition-colors shadow-xs"
             title="Share with people"
           >

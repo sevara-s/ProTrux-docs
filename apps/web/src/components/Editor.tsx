@@ -16,21 +16,17 @@ import Link from '@tiptap/extension-link';
 import { CRDTManager } from '../services/crdt';
 import { DocsToolbar } from './DocsToolbar';
 import { DocsRuler } from './DocsRuler';
-import { WordCountModal } from './WordCountModal';
+import { ModalProvider } from '@/providers/modal-provider';
 import { DEFAULT_DOCUMENT_CONTENT } from '@protrux/shared';
 
 interface EditorProps {
   crdt: CRDTManager;
   onEditorReady?: (editor: any) => void;
-  isWordCountOpen: boolean;
-  onCloseWordCount: () => void;
 }
 
 export const Editor: React.FC<EditorProps> = ({
   crdt,
   onEditorReady,
-  isWordCountOpen,
-  onCloseWordCount,
 }) => {
   const [zoom, setZoom] = useState(100);
   const [displayLiveWordCount, setDisplayLiveWordCount] = useState(false);
@@ -158,16 +154,11 @@ export const Editor: React.FC<EditorProps> = ({
         </div>
       )}
 
-      {/* Google Docs Word Count Dialog */}
-      <WordCountModal
-        isOpen={isWordCountOpen}
-        onClose={onCloseWordCount}
-        words={stats.words}
-        chars={stats.chars}
-        charsNoSpaces={stats.charsNoSpaces}
-        pages={stats.pages}
-        displayLive={displayLiveWordCount}
-        onToggleDisplayLive={setDisplayLiveWordCount}
+      {/* Google Docs Global Modals (Word count & Share) */}
+      <ModalProvider
+        stats={stats}
+        displayLiveWordCount={displayLiveWordCount}
+        onToggleDisplayLiveWordCount={setDisplayLiveWordCount}
       />
     </div>
   );
