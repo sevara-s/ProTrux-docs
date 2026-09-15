@@ -15,7 +15,7 @@ import {
   Printer,
 } from 'lucide-react';
 import { Editor } from '@tiptap/react';
-import { useModal } from '@/store/modal-store';
+import { useModal, useModalStore } from '@/store/modal-store';
 import { useUserStore } from '@/store/user-store';
 import { useDocumentStore } from '@/store/document-store';
 
@@ -246,6 +246,17 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
                       className="w-full px-4 py-1.5 flex items-center justify-between hover:bg-[#f1f3f4] text-left"
                     >
                       <span className="flex items-center gap-2"><FileText className="w-3.5 h-3.5" /> Documents home</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        useModalStore.getState().openModal('open-file');
+                        setActiveMenu(null);
+                      }}
+                      className="w-full px-4 py-1.5 flex items-center justify-between hover:bg-[#f1f3f4] text-left"
+                    >
+                      <span className="flex items-center gap-2"><Folder className="w-3.5 h-3.5 text-[#5f6368]" /> Open / Upload file</span>
+                      <span className="text-[#5f6368] text-[10px]">Ctrl+O</span>
                     </button>
                     <div className="h-[1px] bg-[#dadce0] my-1" />
                     <button

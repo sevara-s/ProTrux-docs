@@ -386,18 +386,70 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
         <MessageSquarePlus className="w-4 h-4" />
       </button>
 
-      {/* Insert Image */}
-      <button
-        type="button"
-        onClick={() => {
-          const url = window.prompt('Enter image URL:');
-          if (url) editor.chain().focus().insertContent(`<img src="${url}" alt="image" style="max-width: 100%; border-radius: 4px;" />`).run();
-        }}
-        className="p-1.5 rounded hover:bg-[#dfe4ea]"
-        title="Insert image"
-      >
-        <ImageIcon className="w-4 h-4" />
-      </button>
+      {/* Insert Image with Dropdown and File Upload */}
+      <div className="relative">
+        <input
+          type="file"
+          id="toolbar-image-upload"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const dataUrl = event.target?.result as string;
+                if (dataUrl) {
+                  (editor.chain().focus() as any).setImage?.({ src: dataUrl, alt: file.name })?.run?.() ||
+                    editor.chain().focus().insertContent(`<img src="${dataUrl}" alt="${file.name}" style="max-width: 100%; border-radius: 4px;" />`).run();
+                }
+              };
+              reader.readAsDataURL(file);
+            }
+            setActiveDropdown(null);
+            e.target.value = '';
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setActiveDropdown(activeDropdown === 'image' ? null : 'image')}
+          className="p-1.5 rounded hover:bg-[#dfe4ea] flex items-center gap-0.5"
+          title="Insert image"
+        >
+          <ImageIcon className="w-4 h-4" />
+          <ChevronDown className="w-2.5 h-2.5 text-[#5f6368]" />
+        </button>
+
+        {activeDropdown === 'image' && (
+          <div className="absolute left-0 mt-1 w-48 bg-white rounded shadow-lg border border-[#dadce0] py-1 z-50 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                document.getElementById('toolbar-image-upload')?.click();
+                setActiveDropdown(null);
+              }}
+              className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-[#f1f3f4] text-left"
+            >
+              <ImageIcon className="w-3.5 h-3.5 text-[#5f6368]" />
+              <span>Upload from computer</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const url = window.prompt('Enter image URL:');
+                if (url) {
+                  editor.chain().focus().insertContent(`<img src="${url}" alt="image" style="max-width: 100%; border-radius: 4px;" />`).run();
+                }
+                setActiveDropdown(null);
+              }}
+              className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-[#f1f3f4] text-left"
+            >
+              <LinkIcon className="w-3.5 h-3.5 text-[#5f6368]" />
+              <span>By URL</span>
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="w-[1px] h-5 bg-[#dadce0] mx-1" />
 

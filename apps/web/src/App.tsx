@@ -7,6 +7,7 @@ import { DocsHeader } from '@/components/DocsHeader';
 import { DocsDashboard } from '@/components/DocsDashboard';
 import { Editor } from '@/components/Editor';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { OpenFileModal } from '@/components/OpenFileModal';
 import { DocumentTemplate } from '@protrux/shared';
 
 export const App: React.FC = () => {
@@ -94,16 +95,45 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleImportContent = async (title: string, content: string) => {
+    const newId = `doc-${Date.now()}`;
+    try {
+      const created = await create(title, newId);
+      setCurrentDocId(created.id);
+      setCurrentDocTitle(created.title);
+      setView('editor');
+      window.location.hash = `doc=${encodeURIComponent(created.id)}`;
+
+      setTimeout(() => {
+        if (editorInstance && content) {
+          editorInstance.commands.setContent(content);
+        }
+      }, 350);
+    } catch (err) {
+      console.error('Error importing content:', err);
+      setCurrentDocId(newId);
+      setCurrentDocTitle(title);
+      setView('editor');
+      window.location.hash = `doc=${encodeURIComponent(newId)}`;
+    }
+  };
+
   // Google Docs Dashboard View (https://docs.google.com/document/u/0/)
   if (view === 'dashboard') {
     return (
-      <DocsDashboard
-        documents={documents}
-        onSelectDocument={handleSelectDocument}
-        onCreateFromTemplate={handleCreateFromTemplate}
-        onDeleteDocument={handleDeleteDocument}
-        currentUser={currentUser}
-      />
+      <>
+        <DocsDashboard
+          documents={documents}
+          onSelectDocument={handleSelectDocument}
+          onCreateFromTemplate={handleCreateFromTemplate}
+          onDeleteDocument={handleDeleteDocument}
+          currentUser={currentUser}
+        />
+        <OpenFileModal
+          onOpenDocument={handleSelectDocument}
+          onImportContent={handleImportContent}
+        />
+      </>
     );
   }
 
@@ -149,6 +179,12 @@ export const App: React.FC = () => {
           Loading document...
         </div>
       )}
+
+      {/* Open / Upload File Modal */}
+      <OpenFileModal
+        onOpenDocument={handleSelectDocument}
+        onImportContent={handleImportContent}
+      />
     </div>
   );
 };

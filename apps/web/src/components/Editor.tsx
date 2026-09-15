@@ -13,6 +13,7 @@ import TextStyle from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import FontFamily from '@tiptap/extension-font-family';
 import Link from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
 import { CRDTManager } from '../services/crdt';
 import { DocsToolbar } from './DocsToolbar';
 import { DocsRuler } from './DocsRuler';
@@ -77,11 +78,61 @@ export const Editor: React.FC<EditorProps> = ({
         TextAlign.configure({
           types: ['heading', 'paragraph'],
         }),
+        Image.configure({
+          inline: true,
+          allowBase64: true,
+        }),
       ],
       editorProps: {
         attributes: {
           class: 'google-docs-content focus:outline-none min-h-[912px] text-[#202124]',
           spellcheck: 'true',
+        },
+        handleDrop: (view, event, slice, moved) => {
+          if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
+            const file = event.dataTransfer.files[0];
+            if (file.type.startsWith('image/')) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                const src = e.target?.result as string;
+                if (src) {
+                  const { schema } = view.state;
+                  const coords = view.posAtCoords({ left: event.clientX, top: event.clientY });
+                  const node = schema.nodes.image.create({ src, alt: file.name });
+                  const tr = view.state.tr.insert(coords ? coords.pos : view.state.selection.from, node);
+                  view.dispatch(tr);
+                }
+              };
+              reader.readAsDataURL(file);
+              return true;
+            }
+          }
+          return false;
+        },
+        handlePaste: (view, event) => {
+          const items = event.clipboardData?.items;
+          if (items) {
+            for (const item of items) {
+              if (item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = (e) => {
+                    const src = e.target?.result as string;
+                    if (src) {
+                      const { schema } = view.state;
+                      const node = schema.nodes.image.create({ src, alt: 'Pasted image' });
+                      const tr = view.state.tr.replaceSelectionWith(node);
+                      view.dispatch(tr);
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                  return true;
+                }
+              }
+            }
+          }
+          return false;
         },
       },
       onUpdate({ editor }) {

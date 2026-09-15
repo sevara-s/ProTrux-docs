@@ -15,6 +15,7 @@ import {
   Menu,
 } from 'lucide-react';
 import { DocumentMetadata, TEMPLATES, DocumentTemplate } from '@protrux/shared';
+import { useModalStore } from '@/store/modal-store';
 
 interface DocsDashboardProps {
   documents: DocumentMetadata[];
@@ -208,8 +209,9 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
                 </button>
                 <button
                   type="button"
+                  onClick={() => useModalStore.getState().openModal('open-file')}
                   className="p-1.5 rounded hover:bg-[#f1f3f4]"
-                  title="Open file picker"
+                  title="Open file picker (Upload Word, Markdown, HTML, Text)"
                 >
                   <Folder className="w-4 h-4" />
                 </button>
