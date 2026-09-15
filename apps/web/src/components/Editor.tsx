@@ -51,13 +51,17 @@ export const Editor: React.FC<EditorProps> = ({
         Collaboration.configure({
           document: crdt.ydoc,
         }),
-        CollaborationCursor.configure({
-          provider: crdt.provider,
-          user: {
-            name: crdt.user.name,
-            color: crdt.user.color,
-          },
-        }),
+        ...(crdt.provider
+          ? [
+              CollaborationCursor.configure({
+                provider: crdt.provider,
+                user: {
+                  name: crdt.user.name,
+                  color: crdt.user.color,
+                },
+              }),
+            ]
+          : []),
         Placeholder.configure({
           placeholder: 'Type @ to insert, or start typing...',
         }),

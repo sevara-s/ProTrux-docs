@@ -8,6 +8,7 @@ import { DocsDashboard } from '@/components/DocsDashboard';
 import { Editor } from '@/components/Editor';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { OpenFileModal } from '@/components/OpenFileModal';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { DocumentTemplate } from '@protrux/shared';
 
 export const App: React.FC = () => {
@@ -26,10 +27,10 @@ export const App: React.FC = () => {
 
   const [editorInstance, setEditorInstance] = useState<any>(null);
 
-  // Bind CRDT manager hook for the active document
+ 
   const crdtManager = useCRDT(view === 'editor' ? currentDocId : '');
 
-  // URL Hash Synchronizer
+ 
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace(/^#/, '');
@@ -121,7 +122,7 @@ export const App: React.FC = () => {
   // Google Docs Dashboard View (https://docs.google.com/document/u/0/)
   if (view === 'dashboard') {
     return (
-      <>
+      <ErrorBoundary fallbackTitle="Google Docs Home Dashboard Error">
         <DocsDashboard
           documents={documents}
           onSelectDocument={handleSelectDocument}
@@ -133,13 +134,14 @@ export const App: React.FC = () => {
           onOpenDocument={handleSelectDocument}
           onImportContent={handleImportContent}
         />
-      </>
+      </ErrorBoundary>
     );
   }
 
   // Google Docs Editor View
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#f9fbfd] flex-col font-sans select-none">
+    <ErrorBoundary fallbackTitle="Google Docs Editor Error">
+      <div className="flex h-screen w-screen overflow-hidden bg-[#f9fbfd] flex-col font-sans select-none">
       {/* Google Docs Top Header & Menus */}
       <DocsHeader
         editor={editorInstance}
@@ -186,6 +188,7 @@ export const App: React.FC = () => {
         onImportContent={handleImportContent}
       />
     </div>
+  </ErrorBoundary>
   );
 };
 

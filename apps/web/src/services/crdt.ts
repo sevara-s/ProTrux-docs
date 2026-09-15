@@ -66,15 +66,13 @@ export class CRDTManager {
   }
 
   private initWebSocket() {
-    if (this.isSimulatedOffline) return;
-
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
     // Connect to WebSocket via Vite proxy or direct host
     const wsUrl = `${protocol}//${host}/ws`;
 
     this.provider = new WebsocketProvider(wsUrl, this.docId, this.ydoc, {
-      connect: true,
+      connect: !this.isSimulatedOffline,
     });
 
     // Configure user awareness (presence & cursor metadata)
@@ -120,19 +118,17 @@ export class CRDTManager {
   public simulateOffline(offline: boolean) {
     this.isSimulatedOffline = offline;
 
+    if (!this.provider) {
+      this.initWebSocket();
+    }
+
     if (offline) {
-      if (this.provider) {
-        this.provider.disconnect();
-      }
+      this.provider?.disconnect();
       this.isConnected = false;
       this.isWsSynced = false;
       this.updateStatus();
     } else {
-      if (this.provider) {
-        this.provider.connect();
-      } else {
-        this.initWebSocket();
-      }
+      this.provider?.connect();
       this.updateStatus();
     }
   }

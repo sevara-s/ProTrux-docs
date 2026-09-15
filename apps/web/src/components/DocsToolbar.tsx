@@ -528,7 +528,12 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       {/* Decrease Indent */}
       <button
         type="button"
-        onClick={() => editor.chain().focus().liftListItem?.('listItem') || editor.chain().focus().run()}
+        onClick={() => {
+          const chain = editor.chain().focus() as any;
+          if (typeof chain.liftListItem === 'function') {
+            chain.liftListItem('listItem').run();
+          }
+        }}
         className="p-1.5 rounded hover:bg-[#dfe4ea]"
         title="Decrease indent"
       >
@@ -538,7 +543,12 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       {/* Increase Indent */}
       <button
         type="button"
-        onClick={() => editor.chain().focus().sinkListItem?.('listItem') || editor.chain().focus().run()}
+        onClick={() => {
+          const chain = editor.chain().focus() as any;
+          if (typeof chain.sinkListItem === 'function') {
+            chain.sinkListItem('listItem').run();
+          }
+        }}
         className="p-1.5 rounded hover:bg-[#dfe4ea]"
         title="Increase indent"
       >
