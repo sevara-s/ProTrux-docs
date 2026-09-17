@@ -91,16 +91,20 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     accessMode === 'view' ? 'View' : accessMode === 'edit' ? 'Edit' : 'Blocked';
 
   return (
-    <div className="fixed inset-0 bg-chrome/55 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-scale">
-      <div className="bg-elevated rounded-panel shadow-lift max-w-md w-full p-6 border border-line">
-        <div className="flex items-start justify-between mb-5">
-          <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent mb-1">Share</p>
-            <h3 className="ptx-mark text-2xl text-fg leading-tight pr-4">
+    <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-chrome/55 p-4 pt-16 pb-8 backdrop-blur-md sm:items-center sm:pt-8 animate-fade-scale">
+      <div className="bg-elevated relative my-auto w-full max-w-md overflow-visible rounded-panel border border-line p-6 pt-7 shadow-lift">
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div className="min-w-0 pt-0.5">
+            <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-accent">Share</p>
+            <h3 className="ptx-mark pr-2 text-2xl leading-[1.25] text-fg">
               Share “{documentTitle || 'Untitled document'}”
             </h3>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 text-fg-muted hover:text-fg rounded-lg hover:bg-muted">
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-lg p-1.5 text-fg-muted hover:bg-muted hover:text-fg"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
