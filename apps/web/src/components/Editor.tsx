@@ -204,6 +204,15 @@ export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
   };
 
   useEffect(() => {
+    if (!editor) return;
+    // Keep TipTap caret labels in sync when "Editing as" changes
+    editor.commands.updateUser?.({
+      name: crdt.user.name,
+      color: crdt.user.color,
+    });
+  }, [editor, crdt.user.name, crdt.user.color]);
+
+  useEffect(() => {
     if (editor && onEditorReady) {
       queueMicrotask(() => {
         onEditorReady(editor);

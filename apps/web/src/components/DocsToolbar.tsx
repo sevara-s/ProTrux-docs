@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Editor } from '@tiptap/react';
 import { yUndoPluginKey } from 'y-prosemirror';
 import { useModal } from '@/store/modal-store';
+import { promptDialog } from '@/store/dialog-store';
 import {
   Undo2,
   Redo2,
@@ -712,8 +713,14 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
       {/* Insert Link */}
       <button
         type="button"
-        onClick={() => {
-          const url = window.prompt('Enter link URL:');
+        onClick={async () => {
+          const url = await promptDialog({
+            title: 'Insert link',
+            message: 'Paste a URL to apply to the current selection.',
+            placeholder: 'https://…',
+            confirmLabel: 'Insert link',
+            inputType: 'url',
+          });
           if (url) {
             (editor.chain().focus() as ReturnType<Editor['chain']> & {
               setLink: (attrs: { href: string }) => ReturnType<Editor['chain']>;
@@ -787,8 +794,14 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
           </button>
           <button
             type="button"
-            onClick={() => {
-              const url = window.prompt('Enter image URL:');
+            onClick={async () => {
+              const url = await promptDialog({
+                title: 'Insert image',
+                message: 'Paste an image URL to embed in the document.',
+                placeholder: 'https://…',
+                confirmLabel: 'Insert image',
+                inputType: 'url',
+              });
               if (url) {
                 editor
                   .chain()

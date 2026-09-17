@@ -86,7 +86,10 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             </div>
           ))}
           {collaborators.length === 0 && (
-            <p className="text-xs text-fg-muted py-2">No peers yet — open this link in another tab.</p>
+            <p className="text-xs text-fg-muted py-2 leading-relaxed">
+              No peers yet. Open this link in another tab (or Incognito). Each tab gets its own name —
+              or pick one under <strong className="text-fg">You ·</strong> in the header.
+            </p>
           )}
         </div>
       </div>

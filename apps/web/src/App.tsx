@@ -9,6 +9,10 @@ import { Editor } from '@/components/Editor';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { OpenFileModal } from '@/components/OpenFileModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { AppDialog } from '@/components/AppDialog';
+import { PresenceToasts } from '@/components/PresenceToasts';
+import { JoinIdentityModal } from '@/components/JoinIdentityModal';
+import { confirmDialog } from '@/store/dialog-store';
 import { DocumentTemplate } from '@protrux/shared';
 
 function readDocFromHash(): string | null {
@@ -29,6 +33,9 @@ export const App: React.FC = () => {
   const setPendingContent = useDocumentStore((state) => state.setPendingContent);
 
   const currentUser = useUserStore((state) => state.currentUser);
+  const setCurrentUser = useUserStore((state) => state.setCurrentUser);
+  const hasChosenIdentity = useUserStore((state) => state.hasChosenIdentity);
+  const markIdentityChosen = useUserStore((state) => state.markIdentityChosen);
   const isSimulatedOffline = useUserStore((state) => state.isSimulatedOffline);
   const syncStatus = useUserStore((state) => state.syncStatus);
   const toggleSimulatedOffline = useUserStore((state) => state.toggleSimulatedOffline);
@@ -103,7 +110,14 @@ export const App: React.FC = () => {
 
   const handleDeleteDocument = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (!window.confirm('Move this document to trash?')) return;
+    const ok = await confirmDialog({
+      title: 'Move to trash?',
+      message: 'This removes the document from your library. CRDT history on the server will be deleted.',
+      confirmLabel: 'Move to trash',
+      cancelLabel: 'Keep document',
+      danger: true,
+    });
+    if (!ok) return;
 
     await remove(id);
     if (currentDocId === id) {
@@ -140,6 +154,8 @@ export const App: React.FC = () => {
           onOpenDocument={handleSelectDocument}
           onImportContent={handleImportContent}
         />
+        <AppDialog />
+        <PresenceToasts />
       </ErrorBoundary>
     );
   }
@@ -191,6 +207,18 @@ export const App: React.FC = () => {
         <OpenFileModal
           onOpenDocument={handleSelectDocument}
           onImportContent={handleImportContent}
+        />
+        <AppDialog />
+        <PresenceToasts />
+        <JoinIdentityModal
+          isOpen={view === 'editor' && !hasChosenIdentity}
+          initialName={currentUser.name}
+          initialColor={currentUser.color}
+          onContinue={(user) => {
+            setCurrentUser(user);
+            markIdentityChosen();
+            editorInstance?.commands?.updateUser?.(user);
+          }}
         />
       </div>
     </ErrorBoundary>

@@ -74,7 +74,7 @@ export class CRDTManager {
     this.isSimulatedOffline =
       options.startSimulatedOffline ?? readSimulatedOfflineFlag();
 
-    const savedUser = localStorage.getItem('protrux_user_profile');
+    const savedUser = sessionStorage.getItem('protrux_user_profile');
     if (savedUser) {
       try {
         this.user = JSON.parse(savedUser);
@@ -83,7 +83,11 @@ export class CRDTManager {
       }
     } else {
       this.user = options.user || getRandomUser();
-      localStorage.setItem('protrux_user_profile', JSON.stringify(this.user));
+      try {
+        sessionStorage.setItem('protrux_user_profile', JSON.stringify(this.user));
+      } catch {
+        // ignore
+      }
     }
 
     this.ydoc = new Y.Doc();
@@ -245,7 +249,11 @@ export class CRDTManager {
 
   public updateUser(name: string, color: string) {
     this.user = { name, color };
-    localStorage.setItem('protrux_user_profile', JSON.stringify(this.user));
+    try {
+      sessionStorage.setItem('protrux_user_profile', JSON.stringify(this.user));
+    } catch {
+      // ignore
+    }
     if (this.provider) {
       this.provider.awareness.setLocalStateField('user', { name, color });
     }

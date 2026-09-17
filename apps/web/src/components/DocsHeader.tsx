@@ -273,20 +273,42 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
               type="button"
               onClick={() => setActiveMenu(activeMenu === 'persona' ? null : 'persona')}
               className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-chrome-fg hover:bg-white/10 transition-colors"
+              title="Change who you appear as to other users"
             >
               <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: currentUser.color }} />
-              <span className="font-semibold truncate max-w-[90px] hidden lg:inline">{currentUser.name}</span>
+              <span className="font-semibold truncate max-w-[110px]">
+                <span className="text-chrome-muted font-medium hidden xl:inline">You · </span>
+                {currentUser.name}
+              </span>
               <ChevronDown className="w-3 h-3 opacity-50" />
             </button>
             {activeMenu === 'persona' && (
               <div className="absolute right-0 mt-2 w-64 ptx-menu">
-                <p className="px-3.5 py-1.5 text-[10px] font-mono uppercase tracking-widest text-fg-muted">Persona</p>
+                <p className="px-3.5 py-1.5 text-[10px] font-mono uppercase tracking-widest text-fg-muted">
+                  Editing as
+                </p>
+                <p className="px-3.5 pb-2 text-[10px] text-fg-muted leading-snug">
+                  Choose a display name so others can see who is typing.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    useUserStore.getState().requestIdentityEdit();
+                    setActiveMenu(null);
+                  }}
+                  className="ptx-menu-item !text-accent font-semibold"
+                >
+                  Enter my name…
+                </button>
+                <div className="h-px bg-line my-1" />
                 {DEMO_PERSONAS.map((p) => (
                   <button
                     key={p.name}
                     type="button"
                     onClick={() => {
                       setCurrentUser({ name: p.name, color: p.color });
+                      useUserStore.getState().markIdentityChosen();
+                      editor?.commands.updateUser?.({ name: p.name, color: p.color });
                       setActiveMenu(null);
                     }}
                     className={`ptx-menu-item ${currentUser.name === p.name ? '!bg-accent-soft !text-accent font-bold' : ''}`}
@@ -317,20 +339,31 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
             <span className="hidden xl:inline">{isSimulatedOffline ? 'Reconnect' : 'Offline'}</span>
           </button>
 
-          {collaborators.length > 0 && (
-            <div className="flex -space-x-1.5">
-              {collaborators.map((c) => (
-                <div
-                  key={c.id}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-fg-invert ring-2 ring-chrome"
-                  style={{ backgroundColor: c.color }}
-                  title={c.name}
-                >
-                  {c.name.charAt(0)}
+          <div className="flex items-center gap-1.5">
+            {collaborators.length > 0 ? (
+              <>
+                <div className="flex -space-x-1.5">
+                  {collaborators.slice(0, 4).map((c) => (
+                    <div
+                      key={c.id}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-accent-fg ring-2 ring-chrome"
+                      style={{ backgroundColor: c.color }}
+                      title={c.name}
+                    >
+                      {c.name.charAt(0)}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+                <span className="hidden md:inline text-[10px] font-mono text-chrome-muted max-w-[140px] truncate">
+                  {collaborators.map((c) => c.name.split(' ')[0]).join(', ')}
+                </span>
+              </>
+            ) : (
+              <span className="hidden lg:inline text-[10px] font-mono text-chrome-muted">
+                Only you
+              </span>
+            )}
+          </div>
 
           <button
             type="button"
