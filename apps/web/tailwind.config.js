@@ -39,8 +39,8 @@ export default {
         },
       },
       fontFamily: {
-        display: ['Fraunces', 'Georgia', 'serif'],
-        sans: ['Manrope', 'system-ui', 'sans-serif'],
+        display: ['Syne', 'Manrope', 'system-ui', 'sans-serif'],
+        sans: ['Syne', 'Manrope', 'system-ui', 'sans-serif'],
         serif: ['"Source Serif 4"', 'Georgia', 'serif'],
         mono: ['"IBM Plex Mono"', 'Menlo', 'monospace'],
       },
@@ -50,7 +50,7 @@ export default {
         glow: 'var(--shadow-glow)',
       },
       borderRadius: {
-        panel: '1.25rem',
+        panel: '0.5rem',
       },
       keyframes: {
         'rise-in': {

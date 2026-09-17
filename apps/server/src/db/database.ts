@@ -142,7 +142,13 @@ export class Database {
     return rows
       .map(mapRow)
       .filter((doc) => {
-        if (doc.accessMode !== 'private') return true;
+        // Private: owner only
+        if (doc.accessMode === 'private') {
+          return !!viewerOwnerKey && doc.ownerKey === viewerOwnerKey;
+        }
+        // Library shows unowned rooms + docs you own.
+        // Guests open shared rooms via the share link (`k`), not the library.
+        if (!doc.ownerKey) return true;
         return !!viewerOwnerKey && doc.ownerKey === viewerOwnerKey;
       })
       .map((doc) => this.toPublic(doc, viewerOwnerKey));

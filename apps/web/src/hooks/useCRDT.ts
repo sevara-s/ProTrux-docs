@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CRDTManager } from '@/services/crdt';
+import { getOwnerKey } from '@/services/owner-key';
+import { useDocumentStore } from '@/store/document-store';
 import { useUserStore } from '@/store/user-store';
 
 export function useCRDT(docId: string) {
@@ -8,6 +10,7 @@ export function useCRDT(docId: string) {
   const isSimulatedOffline = useUserStore((state) => state.isSimulatedOffline);
   const setSyncStatus = useUserStore((state) => state.setSyncStatus);
   const setCollaborators = useUserStore((state) => state.setCollaborators);
+  const shareToken = useDocumentStore((state) => state.shareToken);
 
   const managerRef = useRef<CRDTManager | null>(null);
 
@@ -32,6 +35,8 @@ export function useCRDT(docId: string) {
       docId,
       user: currentUser,
       startSimulatedOffline: isSimulatedOffline,
+      ownerKey: getOwnerKey(),
+      shareToken: shareToken || readShareTokenFromHash(),
       onStatusChange: (status) => setSyncStatus(status),
       onAwarenessChange: (users) => {
         setCollaborators(users);
@@ -47,9 +52,9 @@ export function useCRDT(docId: string) {
         managerRef.current = null;
       }
     };
-    // Intentionally only re-bind when the document room changes.
+    // Re-bind when the room or guest share token changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [docId]);
+  }, [docId, shareToken]);
 
   useEffect(() => {
     if (managerRef.current) {
@@ -64,4 +69,14 @@ export function useCRDT(docId: string) {
   }, [currentUser]);
 
   return manager;
+}
+
+function readShareTokenFromHash(): string | null {
+  try {
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash) return null;
+    return new URLSearchParams(hash).get('k');
+  } catch {
+    return null;
+  }
 }

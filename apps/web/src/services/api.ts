@@ -1,14 +1,13 @@
 import { DocumentAccessMode, DocumentMetadata } from '@protrux/shared';
+import { ENDPOINTS } from '@/constants/api-endpoints';
 import { getOwnerKey, ownerHeaders } from '@/services/owner-key';
-
-const API_BASE = '/api';
 
 export type DocumentAccessInfo = DocumentMetadata & {
   canEdit?: boolean;
 };
 
 export async function getDocuments(): Promise<DocumentMetadata[]> {
-  const res = await fetch(`${API_BASE}/documents?ownerKey=${encodeURIComponent(getOwnerKey())}`, {
+  const res = await fetch(`${ENDPOINTS.DOCUMENTS}?ownerKey=${encodeURIComponent(getOwnerKey())}`, {
     headers: ownerHeaders(),
   });
   if (!res.ok) throw new Error('Failed to fetch documents');
@@ -21,7 +20,7 @@ export async function getDocument(
 ): Promise<DocumentAccessInfo> {
   const params = new URLSearchParams({ ownerKey: getOwnerKey() });
   if (shareToken) params.set('k', shareToken);
-  const res = await fetch(`${API_BASE}/documents/${encodeURIComponent(id)}?${params}`, {
+  const res = await fetch(`${ENDPOINTS.DOCUMENT_DETAIL(id)}?${params}`, {
     headers: ownerHeaders(),
   });
   if (res.status === 403) {
@@ -39,7 +38,7 @@ export async function createDocument(
   id?: string,
   accessMode: DocumentAccessMode = 'edit'
 ): Promise<DocumentMetadata> {
-  const res = await fetch(`${API_BASE}/documents`, {
+  const res = await fetch(ENDPOINTS.DOCUMENTS, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...ownerHeaders() },
     body: JSON.stringify({ title, id, accessMode }),
@@ -52,7 +51,7 @@ export async function updateDocument(
   id: string,
   data: { title?: string; previewText?: string; accessMode?: DocumentAccessMode }
 ): Promise<DocumentAccessInfo> {
-  const res = await fetch(`${API_BASE}/documents/${encodeURIComponent(id)}`, {
+  const res = await fetch(ENDPOINTS.DOCUMENT_DETAIL(id), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...ownerHeaders() },
     body: JSON.stringify(data),
@@ -62,7 +61,7 @@ export async function updateDocument(
 }
 
 export async function deleteDocument(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/documents/${encodeURIComponent(id)}`, {
+  const res = await fetch(ENDPOINTS.DOCUMENT_DETAIL(id), {
     method: 'DELETE',
     headers: ownerHeaders(),
   });

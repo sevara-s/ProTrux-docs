@@ -1,199 +1,296 @@
-# Helix by ProTrux
-### Local-first collaborative folio editor with CRDT sync
+# ProTrux — Signal Desk
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+### Local-first collaborative document editor with CRDT sync
+
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
-[![CRDT Engine](https://img.shields.io/badge/CRDT-Yjs-teal.svg)](https://github.com/yjs/yjs)
-[![Tests](https://img.shields.io/badge/Tests-Vitest-emerald.svg)](https://vitest.dev)
+[![CRDT](https://img.shields.io/badge/CRDT-Yjs-e8a84a.svg)](https://github.com/yjs/yjs)
+[![Tests](https://img.shields.io/badge/Tests-Vitest-passing.svg)](https://vitest.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A full-stack collaborative writing workspace with mathematical CRDT consistency, live multi-author carets, IndexedDB offline durability, and deterministic zero-loss merge on reconnect.
+A full-stack web document editor built for **real-time multi-author editing**, **true offline durability**, and an **original Signal Desk design** — not a Google Docs visual clone and not a stock UI-kit theme.
 
-Built as an **original editorial product** (Helix) — not a Google Docs visual clone and not a stock UI-kit theme. Design system uses **three colors only**: ink `#13201c`, forest `#1f6f5c`, mist `#eef3f1` (plus tints/shades). Typography: Fraunces + Manrope + Source Serif 4.
-
----
-
-## Table of Contents
-1. [System Architecture](#system-architecture--data-flow)
-2. [Why CRDT & Yjs](#why-crdt--yjs)
-3. [Offline-First Lifecycle](#offline-first-lifecycle)
-4. [Original Design System](#original-design-system)
-5. [Quickstart](#quickstart)
-6. [Tests](#tests)
-7. [3–5 Minute Demo Script](#35-minute-demo-script)
+**Stack:** React · Vite · TipTap/ProseMirror · Yjs · Fastify · WebSockets · SQLite · IndexedDB
 
 ---
 
-## System Architecture & Data Flow
+## Assignment coverage (MVP checklist)
 
-```mermaid
-flowchart TB
-    subgraph Browser_A ["Client A"]
-        Editor_A["Helix Editor (Tiptap / ProseMirror)"]
-        YDoc_A["Y.Doc + XmlFragment(default)"]
-        Awareness_A["Awareness (carets & peers)"]
-        IDB_A[("IndexedDB y-indexeddb")]
-        Sync_A["Sync state machine"]
-
-        Editor_A <--> YDoc_A
-        Editor_A <--> Awareness_A
-        YDoc_A <--> IDB_A
-        YDoc_A <--> Sync_A
-        Awareness_A <--> Sync_A
-    end
-
-    subgraph Browser_B ["Client B"]
-        Editor_B["Helix Editor"]
-        YDoc_B["Y.Doc"]
-        IDB_B[("IndexedDB")]
-        Sync_B["Sync state machine"]
-
-        Editor_B <--> YDoc_B
-        YDoc_B <--> IDB_B
-        YDoc_B <--> Sync_B
-    end
-
-    subgraph Server ["Node.js / Fastify hub"]
-        WSS["WebSocket /ws/:docName"]
-        RoomHub["y-websocket rooms"]
-        Compaction["Snapshot compaction"]
-        REST["Document REST API"]
-        DB[("SQLite WAL\nmetadata + CRDT deltas")]
-
-        WSS <--> RoomHub
-        RoomHub <--> Compaction
-        Compaction <--> DB
-        REST <--> DB
-    end
-
-    Sync_A <== "Binary state vectors & deltas" ==> WSS
-    Sync_B <== "Binary state vectors & deltas" ==> WSS
-```
-
-### Highlights
-- **Monorepo (`pnpm` workspaces):** `apps/web` (React + Vite + Tiptap), `apps/server` (Fastify + WebSocket + SQLite), `packages/shared` (types, templates, presence).
-- **Server persistence:** Node `DatabaseSync` SQLite — no external DB. Incremental binary updates + periodic snapshot compaction.
-- **Client durability:** Every edit hits IndexedDB via `y-indexeddb` before/alongside the wire. Simulate Offline survives **tab refresh** via `sessionStorage`.
-- **Offline creates:** If REST is unreachable, folio metadata is queued in `localStorage` and flushed when the link returns.
+| Requirement | How ProTrux delivers it |
+| :--- | :--- |
+| Rich text: bold, italic, headings, lists | TipTap editor + format toolbar (also underline, color, highlight, align, tasks, links, images) |
+| Real-time collaboration (≥2 tabs/browsers) | Yjs CRDT over WebSocket; no page reload |
+| Offline edit → local persist → correct merge | `y-indexeddb` + Fork control; state-vector merge on reconnect — no overwrite dialog |
+| Presence / cursors | Named colored carets, peer count (`MERGED · N`), join/leave toasts |
+| Document persistence | SQLite (metadata + CRDT deltas/snapshots) + client IndexedDB |
+| Original design system | Signal Desk: carbon drafting table, bone paper, amber signal, Syne + Source Serif |
 
 ---
 
-## Why CRDT & Yjs
+## Table of contents
 
-| Criterion | OT | CRDT (Yjs) |
-| :--- | :--- | :--- |
-| Network | Central sequencer for every op | Commutative deltas; any arrival order |
-| Offline | Fragile transform histories | Native: exchange state vectors, merge |
-| Integrity | Split/merge edge bugs | Strong eventual consistency |
-| Server load | Heavy transform CPU | Lightweight binary relay + store |
-
-**Why Yjs (vs Automerge):** run-length linked list, tiny binary updates, official ProseMirror/Tiptap collaboration + cursor bindings, `lib0` encoding.
-
----
-
-## Offline-First Lifecycle
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor UserA as Author A (online)
-    participant ClientA as Client A (Y.Doc + IDB)
-    participant Server as Server (SQLite + WS)
-    participant ClientB as Client B (Y.Doc + IDB)
-    actor UserB as Author B (offline)
-
-    Note over ClientA,ClientB: Synced at state vector V0
-
-    UserB->>ClientB: Offline (header) or network drop
-    Note over ClientB: Status → Offline · IndexedDB active
-    UserB->>ClientB: Edit offline paragraph
-    UserA->>ClientA: Edit online
-    ClientA->>Server: ΔA
-    Server->>Server: Persist ΔA
-
-    Note over UserB,ClientB: Restore link (or refresh while still Offline)
-    ClientB->>Server: State vector VB
-    Server->>ClientB: Missing ΔA
-    ClientB->>Server: Offline ΔB
-    Note over UserA,UserB: Identical folio · zero drops · zero overwrites
-```
-
-### Demo controls
-1. **Offline / Reconnect** in the chrome — partitions the WebSocket; flag persists across reload.
-2. **Persona switcher** — Elena / Marcus / Liam / Sophia for clear caret colors (use a second tab).
-3. **Presence rail** — live author color spectrum under the format dock (not an inch ruler).
-
----
-
-## Original Design System
-
-Assignment requirement:
-> Design must be original — **not a copy of Google Docs** and not a default UI-framework theme. Judged on system consistency: palette, icons, spacing, typography.
-
-Helix response:
-- **3 colors:** Ink `#13201c`, Forest `#1f6f5c`, Mist `#eef3f1` — warn/live/success are forest tints, not coral/lime.
-- **Type:** Fraunces (display), Manrope (UI), Source Serif 4 (body).
-- **IA:** Folio · Compose · Embed · Style · Lab — not File/Edit/View/Insert/Format/Tools.
-- **Canvas:** continuous rounded folio column with spine accent — not an 8.5×11 Docs page + ruler.
-- **Chrome:** floating format dock, sync chips (`Synced` / `Merge` / `Linking` / `Offline`), presence rail.
+1. [Quickstart](#quickstart)
+2. [Architecture](#architecture)
+3. [Why Yjs (CRDT) for sync & offline](#why-yjs-crdt-for-sync--offline)
+4. [Offline-first lifecycle](#offline-first-lifecycle)
+5. [Design system — Signal Desk](#design-system--signal-desk)
+6. [Product surface](#product-surface)
+7. [Tests](#tests)
+8. [Demo script (3–5 min)](#demo-script-35-min)
+9. [Project structure](#project-structure)
 
 ---
 
 ## Quickstart
+
+**Requirements:** Node 20+, [pnpm](https://pnpm.io) 9+
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-- Web: `http://localhost:5173`
-- API / WebSocket: `http://localhost:4000` (Vite proxies `/ws` and `/api`)
+| Service | URL |
+| :--- | :--- |
+| Web app | http://localhost:5173 |
+| API + WebSocket | http://localhost:4000 |
+
+Vite proxies `/api` and `/ws` to the server in development.
 
 ```bash
-pnpm test    # Vitest CRDT + SQLite suite
-pnpm build   # production build
+pnpm test     # Vitest — CRDT, ACL, REST access
+pnpm lint     # ESLint across web + server + tests
+pnpm build    # shared → server → web
+pnpm start    # production server (serves built web when present)
 ```
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph Client_A ["Browser A"]
+        UI_A["Signal Desk UI<br/>TipTap / ProseMirror"]
+        Y_A["Y.Doc + XmlFragment(default)"]
+        AW_A["Awareness<br/>carets · peers"]
+        IDB_A[("IndexedDB<br/>y-indexeddb")]
+        SM_A["Sync state machine"]
+
+        UI_A <--> Y_A
+        UI_A <--> AW_A
+        Y_A <--> IDB_A
+        Y_A <--> SM_A
+        AW_A <--> SM_A
+    end
+
+    subgraph Client_B ["Browser B"]
+        UI_B["Signal Desk UI"]
+        Y_B["Y.Doc"]
+        IDB_B[("IndexedDB")]
+        SM_B["Sync state machine"]
+
+        UI_B <--> Y_B
+        Y_B <--> IDB_B
+        Y_B <--> SM_B
+    end
+
+    subgraph Hub ["Node.js · Fastify"]
+        WS["WebSocket /ws/:docId"]
+        Rooms["y-websocket rooms"]
+        Compact["Snapshot compaction"]
+        REST["REST /api/documents"]
+        DB[("SQLite WAL<br/>metadata + deltas")]
+
+        WS <--> Rooms
+        Rooms <--> Compact
+        Compact <--> DB
+        REST <--> DB
+    end
+
+    SM_A <== "Binary state vectors & updates" ==> WS
+    SM_B <== "Binary state vectors & updates" ==> WS
+```
+
+### Highlights
+
+- **Monorepo (`pnpm` workspaces):** `apps/web`, `apps/server`, `packages/shared`
+- **Server:** Fastify + `ws`; SQLite via Node `DatabaseSync` — no external DB required
+- **Client durability:** every edit is persisted in IndexedDB; Fork flag survives refresh (`sessionStorage`)
+- **Offline creates:** document metadata can queue in `localStorage` and flush when the API returns
+- **Sharing:** private / view / edit modes enforced on **REST and WebSocket** (owner key + share token `k`); view rooms drop CRDT write frames server-side
+- **Library:** only your docs + unowned rooms; guests join via share links, not the dashboard list
+- **Quality gates:** ESLint + Vitest (CRDT convergence, ACL unit tests, REST access inject)
+
+---
+
+## Why Yjs (CRDT) for sync & offline
+
+The brief allows any CRDT/OT library. Writing OT from scratch is **not** a plus. We chose **Yjs** deliberately:
+
+| Criterion | Classic OT | Yjs CRDT |
+| :--- | :--- | :--- |
+| Network model | Central sequencer for every op | Commutative binary updates; any arrival order |
+| Offline | Fragile transform histories | Native: exchange state vectors, merge |
+| Integrity | Split/merge edge cases | Strong eventual consistency |
+| Server role | Heavy transform CPU | Relay + persist (+ compaction) |
+| Editor fit | Custom wiring | Official ProseMirror / TipTap + awareness |
+
+**Why Yjs over Automerge here:** compact binary encoding (`lib0`), battle-tested TipTap collaboration + cursor plugins, and low latency for character-level editing.
+
+The server is **not** the source of truth for merge math — the CRDT is. SQLite stores updates/snapshots so rooms can reload after restarts.
+
+---
+
+## Offline-first lifecycle
+
+This is the criterion the brief says is most often faked. ProTrux treats it as a first-class path.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor A as Author A (online)
+    participant CA as Client A · Y.Doc + IDB
+    participant S as Server · SQLite + WS
+    participant CB as Client B · Y.Doc + IDB
+    actor B as Author B (forked)
+
+    Note over CA,CB: Synced at state vector V0
+
+    B->>CB: Fork (or real network drop)
+    Note over CB: Status → LOCAL FORK · IndexedDB keeps writing
+    B->>CB: Offline edits (ΔB)
+    A->>CA: Online edits (ΔA)
+    CA->>S: Persist ΔA
+
+    Note over B,CB: Optional: refresh while still Forked — draft survives
+    B->>CB: Rejoin / network restored
+    CB->>S: State vector VB
+    S->>CB: Missing ΔA
+    CB->>S: Offline ΔB
+    Note over A,B: Identical document · zero drops · no overwrite dialog
+```
+
+### Demo controls in the UI
+
+1. **Fork / Rejoin** in the header — partitions the WebSocket; flag survives reload
+2. **Chalk “Local fork” banner** — desk desaturates while offline
+3. **Persona switcher** — distinct caret colors across tabs (Elena / Marcus / Liam / Sophia)
+4. **Mono sync line** — `MERGED · N` / `LOCAL FORK` / `MERGING` / `TUNING`
+
+---
+
+## Design system — Signal Desk
+
+Assignment requirement:
+
+> Design must be original — **not a copy of Google Docs** and not a default UI-framework theme. Judged on **system consistency**: palette, icons, spacing, typography.
+
+| Token | Role |
+| :--- | :--- |
+| Carbon `#12141a` | Drafting-table desk / chrome |
+| Bone `#fffcf7` / `#f3efe6` | Paper & light surfaces |
+| Amber signal `#c8890a` / `#e8a84a` | Accent, sync, section labels |
+| **Type** | Syne (UI / display) · Source Serif 4 (body) · IBM Plex Mono (signal text) |
+
+**Product metaphor:** a dark engineering desk with one bright sheet under a spotlight. Sync is typography (`MERGED · 2`), not green “Synced” pills. Offline is a **local fork**, not a toast that pretends nothing happened.
+
+Useful Docs-like *capabilities* (page size, ruler, export, image resize) exist as tools — the chrome, palette, and motion language stay Signal Desk, not a Drive clone.
+
+---
+
+## Product surface
+
+Beyond the MVP floor:
+
+- **Home:** specimen templates with mini paper previews, document library, import
+- **Editor:** page setup (Letter / A4 / custom), inch ruler with draggable margins, zoom
+- **Formatting:** styles, fonts, size, color, highlight, lists, tasks, links
+- **Images:** insert from file/URL; **Docs-style resize handles** (width syncs via CRDT)
+- **Download:** PDF (print → Save as PDF), Word (`.docx`), Markdown, HTML, plain text
+- **Share:** private / view / edit — enforced on REST + WebSocket (not UI-only)
+- **Theme:** light / dark chrome; paper stays bone for reading
 
 ---
 
 ## Tests
 
-`tests/crdt-convergence.test.ts` covers:
-1. Concurrent online convergence
-2. Offline divergent merge (text)
-3. **TipTap-shaped `XmlFragment('default')` offline merge**
-4. **Encoded-update round-trip** (local ledger / refresh model)
-5. SQLite snapshot compaction
-6. Watermark race safety during compaction
-7. Document delete accuracy
+```bash
+pnpm test
+```
+
+`tests/crdt-convergence.test.ts` (7 cases):
+
+1. Concurrent online convergence  
+2. Offline divergent merge (text)  
+3. TipTap-shaped `XmlFragment('default')` offline merge  
+4. Encoded-update round-trip (refresh / local ledger model)  
+5. SQLite snapshot compaction  
+6. Watermark race safety during compaction  
+7. Document delete accuracy  
 
 ---
 
-## 3–5 Minute Demo Script
+## Demo script (3–5 min)
 
-### 1. Design system (0:00 – 0:45)
-1. Open `http://localhost:5173`.
-2. Show Helix home: template pads, archive grid, ink/forest/mist brand — **not Drive/Docs**.
-3. Open a folio. Point out Folio/Compose/Embed/Style/Lab, format dock, presence rail, rounded folio column.
+Use this for the submission video.
 
-### 2. Real-time collaboration (0:45 – 2:00)
-1. Second window side-by-side on the same `#doc=…` URL.
-2. Switch Window 2 persona to **Liam Chen** or **Sophia Lin**.
-3. Type in both windows — live carets + name flags; highlight shows remote selection.
-4. Note peer avatars in the header and Share modal.
+### 1. Design (0:00 – 0:40)
+1. Open http://localhost:5173  
+2. Show Signal Desk home: carbon header, amber **SPECIMENS**, mini paper previews — **not Drive**  
+3. Open **Resume (Modern)** — dark desk, bone page, amber section labels, mono `MERGED · 1`
+
+### 2. Real-time collaboration (0:40 – 2:00)
+1. Duplicate the tab / open the same `#doc=…` URL side-by-side  
+2. Window 2 → persona → **Liam Chen** or **Sophia Lin**  
+3. Type in both windows — live carets + name labels  
+4. Point at header: `MERGED · 2`
 
 ### 3. Offline + zero-loss merge (2:00 – 3:50) ★
-1. Window 2 → **Offline**: chip turns Offline; banner explains IndexedDB.
-2. Window 1 (online): add a heading/paragraph.
-3. Window 2 (offline): add different text + bold/highlight.
-4. **Optional proof:** refresh Window 2 while still Offline — draft survives (simulate flag + IndexedDB).
-5. Window 2 → **Reconnect**: both converge; chip → **Synced**. Zero drops, no conflict dialog.
+1. Window 2 → **Fork** — chalk **Local fork** banner; status → `LOCAL FORK`  
+2. Window 1 (online): add a heading or paragraph  
+3. Window 2 (offline): add different text + bold / highlight  
+4. **Optional proof:** refresh Window 2 while still Forked — content survives  
+5. Window 2 → **Rejoin** — both converge; status → `MERGED · 2`. No conflict dialog, no lost text
 
-### 4. Export & wrap (3:50 – 4:30)
-1. Lab → Word count (or Metrics on the dock).
-2. Folio → Export Markdown/HTML/Text.
-3. One-line close: Yjs CRDT chosen for offline-native merge vs OT sequencers.
+### 4. Close (3:50 – 4:30)
+1. **File → Page setup** or drag ruler margins  
+2. Click an image → show resize handles (or insert one quickly)  
+3. **File → Download → PDF** or Word  
+4. One-line close: *“Yjs CRDT so offline merges are math — not last-write-wins.”*
+
+---
+
+## Project structure
+
+```
+ProTrux-task/
+├── apps/
+│   ├── web/                 # React + Vite + TipTap (Signal Desk UI)
+│   │   └── src/
+│   │       ├── components/  # Editor shell, header, dashboard, modals
+│   │       │   └── toolbar/ # DocsToolbar pieces (PortalMenu, constants)
+│   │       ├── extensions/  # FontSize, ResizableImage
+│   │       ├── constants/   # API endpoint map
+│   │       ├── hooks/       # useCRDT, useDocuments
+│   │       ├── lib/         # cn, date helpers
+│   │       ├── services/    # CRDT manager, API, export, owner-key
+│   │       ├── store/       # Zustand (docs, user, page, theme)
+│   │       └── providers/   # Modal host
+│   └── server/              # Fastify + WebSocket + SQLite
+│       └── src/
+│           ├── access.ts    # Shared REST/WS ACL
+│           ├── app.ts       # buildApp (HTTP + WS + shutdown)
+│           ├── api/         # REST document routes
+│           ├── crdt/        # Persistence, typed y-websocket wrapper, view-only filter
+│           └── db/          # SQLite schema & access
+├── packages/shared/         # Types, templates, presence helpers
+├── tests/                   # Vitest: CRDT, ACL, REST access
+├── data/                    # SQLite files (local)
+└── package.json             # pnpm workspace scripts (dev/build/test/lint)
+```
 
 ---
 
 ## License
-MIT. Built for the ProTrux Challenge.
+
+MIT. Built for the ProTrux collaborative-docs challenge.

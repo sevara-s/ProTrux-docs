@@ -2,8 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { INCH, inchesToPx, usePageStore } from '@/store/page-store';
 
 /**
- * Google Docs–style horizontal ruler locked to the page width,
- * with draggable left / right margin guides.
+ * Industrial measure strip locked to page width — Signal desk geometry.
  */
 export const DocsRuler: React.FC = () => {
   const widthIn = usePageStore((s) => s.widthIn);
@@ -20,10 +19,9 @@ export const DocsRuler: React.FC = () => {
   const contentWidthPx = Math.max(0, widthPx - leftPx - rightPx);
 
   const ticks = [];
-  const majorEvery = 1;
   const minorEvery = 0.125;
   for (let inch = 0; inch <= widthIn + 0.001; inch = Math.round((inch + minorEvery) * 1000) / 1000) {
-    const isMajor = Math.abs(inch % majorEvery) < 0.001 || Math.abs(inch % majorEvery - majorEvery) < 0.001;
+    const isMajor = Math.abs(inch % 1) < 0.001 || Math.abs(inch % 1 - 1) < 0.001;
     const isHalf = !isMajor && Math.abs((inch * 2) % 1) < 0.001;
     ticks.push({
       inch,
@@ -38,12 +36,8 @@ export const DocsRuler: React.FC = () => {
       if (!track) return;
       const rect = track.getBoundingClientRect();
       const xIn = (clientX - rect.left) / INCH;
-
-      if (edge === 'left') {
-        setMargins({ left: xIn });
-      } else {
-        setMargins({ right: widthIn - xIn });
-      }
+      if (edge === 'left') setMargins({ left: xIn });
+      else setMargins({ right: widthIn - xIn });
     },
     [setMargins, widthIn]
   );
@@ -52,9 +46,6 @@ export const DocsRuler: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     setDragging(edge);
-    const target = e.currentTarget;
-    target.setPointerCapture(e.pointerId);
-
     const onMove = (ev: PointerEvent) => onPointerMove(ev.clientX, edge);
     const onUp = () => {
       setDragging(null);
@@ -66,30 +57,16 @@ export const DocsRuler: React.FC = () => {
   };
 
   return (
-    <div className="ptx-ruler shrink-0 select-none border-b border-line bg-muted/80">
+    <div className="ptx-ruler shrink-0 select-none">
       <div className="w-full flex justify-center px-4 py-0">
-        <div
-          ref={trackRef}
-          className="relative h-5 bg-elevated"
-          style={{ width: widthPx }}
-        >
-          {/* Non-writable (margin) regions */}
+        <div ref={trackRef} className="relative h-5" style={{ width: widthPx }}>
+          <div className="absolute inset-y-0 left-0 bg-white/[0.04]" style={{ width: leftPx }} />
+          <div className="absolute inset-y-0 right-0 bg-white/[0.04]" style={{ width: rightPx }} />
           <div
-            className="absolute inset-y-0 left-0 bg-muted/90 pointer-events-none"
-            style={{ width: leftPx }}
-          />
-          <div
-            className="absolute inset-y-0 right-0 bg-muted/90 pointer-events-none"
-            style={{ width: rightPx }}
-          />
-
-          {/* Writable band */}
-          <div
-            className="absolute inset-y-0 bg-elevated pointer-events-none"
+            className="absolute inset-y-0 bg-white/[0.07]"
             style={{ left: leftPx, width: contentWidthPx }}
           />
 
-          {/* Tick marks */}
           {ticks.map((t) => (
             <div
               key={t.inch}
@@ -97,19 +74,22 @@ export const DocsRuler: React.FC = () => {
               style={{ left: t.left, transform: 'translateX(-50%)' }}
             >
               {t.kind === 'major' && t.inch > 0 && t.inch < widthIn && (
-                <span className="text-[9px] leading-none text-fg-muted mb-0.5 tabular-nums">
+                <span className="text-[8px] leading-none text-white/40 mb-0.5 tabular-nums font-mono">
                   {Math.round(t.inch)}
                 </span>
               )}
               <span
-                className={`w-px bg-fg-muted/70 ${
-                  t.kind === 'major' ? 'h-2.5' : t.kind === 'half' ? 'h-2' : 'h-1'
+                className={`w-px ${
+                  t.kind === 'major'
+                    ? 'h-2.5 bg-accent/80'
+                    : t.kind === 'half'
+                      ? 'h-2 bg-white/35'
+                      : 'h-1 bg-white/20'
                 }`}
               />
             </div>
           ))}
 
-          {/* Left margin handle */}
           <button
             type="button"
             aria-label="Left margin"
@@ -123,7 +103,6 @@ export const DocsRuler: React.FC = () => {
             <span className="ptx-ruler-handle__cap" />
           </button>
 
-          {/* Right margin handle */}
           <button
             type="button"
             aria-label="Right margin"
@@ -142,5 +121,4 @@ export const DocsRuler: React.FC = () => {
   );
 };
 
-/** @deprecated Alias kept for older imports. */
 export const FolioRail = DocsRuler;

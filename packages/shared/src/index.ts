@@ -63,11 +63,11 @@ export interface DocumentExport {
 }
 
 export const USER_PALETTES = [
-  { name: 'Ink', color: '#13201c', light: '#dde6e2' },
-  { name: 'Deep forest', color: '#164f42', light: '#d5e8e1' },
-  { name: 'Forest', color: '#1f6f5c', light: '#d8ebe4' },
-  { name: 'Fern', color: '#3d8f7a', light: '#dff0ea' },
-  { name: 'Sage', color: '#5aab94', light: '#e6f3ee' },
+  { name: 'Signal', color: '#c8890a', light: '#f5e6c8' },
+  { name: 'Cobalt', color: '#2f5aa8', light: '#d4e0f5' },
+  { name: 'Ember', color: '#c45c26', light: '#f5d9c8' },
+  { name: 'Teal', color: '#1a7a6d', light: '#cfe8e3' },
+  { name: 'Violet', color: '#6b4ea2', light: '#e4daf5' },
 ];
 
 export const DEFAULT_DOCUMENT_CONTENT = `<h1>Write in parallel.</h1>

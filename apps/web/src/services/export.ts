@@ -156,9 +156,9 @@ export function exportPdf(editor: Editor, title: string, page: ExportPage) {
 }
 
 function headingColor(level: number): string {
-  if (level === 2 || level === 4) return '1F6F5C';
-  if (level === 3) return '2A3D38';
-  return '13201C';
+  if (level === 2 || level === 4) return 'C8890A';
+  if (level === 3) return '2C3038';
+  return '16181D';
 }
 
 function headingLevel(level: number) {

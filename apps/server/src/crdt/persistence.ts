@@ -1,9 +1,10 @@
 import * as Y from 'yjs';
 import { db } from '../db/database.js';
-// @ts-ignore — y-websocket ships CJS utils without types for custom persistence hooks
-import utils from 'y-websocket/bin/utils';
-
-const { setPersistence, docs } = utils;
+import {
+  setPersistence,
+  docs,
+  type WSSharedDoc,
+} from './y-websocket-utils.js';
 
 interface PersistedDocMeta {
   updateCount: number;
@@ -16,14 +17,12 @@ const docMeta = new Map<string, PersistedDocMeta>();
 
 export function initCRDTPersistence() {
   setPersistence({
-    bindState: (docName: string, ydoc: any) => {
+    bindState: (docName: string, ydoc: WSSharedDoc) => {
       try {
-        // Ensure metadata row exists before accepting CRDT traffic
+        // Rooms must be created via REST — do not auto-create on WS bind
         if (!db.getDocument(docName)) {
-          const readableTitle = docName
-            .replace(/[-_]/g, ' ')
-            .replace(/\b\w/g, (c) => c.toUpperCase());
-          db.createDocument(docName, readableTitle || 'Untitled Document');
+          console.warn(`[CRDT Persistence] Refusing bind for unknown doc: ${docName}`);
+          return;
         }
 
         const snapshot = db.getSnapshot(docName);
@@ -39,11 +38,10 @@ export function initCRDTPersistence() {
         const generation = (docMeta.get(docName)?.generation ?? 0) + 1;
         docMeta.set(docName, { updateCount: 0, compacting: false, generation });
 
-        ydoc.on('update', (update: Uint8Array, origin: any) => {
+        ydoc.on('update', (update: Uint8Array, origin: unknown) => {
           if (origin === 'db_load') return;
 
           try {
-            // Refuse writes for deleted / unknown docs (prevents delete resurrection)
             if (!db.getDocument(docName)) {
               return;
             }
@@ -77,7 +75,7 @@ export function initCRDTPersistence() {
       }
     },
 
-    writeState: async (docName: string, ydoc: any) => {
+    writeState: async (docName: string, ydoc: WSSharedDoc) => {
       const meta = docMeta.get(docName);
       if (meta?.compactionTimeout) {
         clearTimeout(meta.compactionTimeout);
@@ -90,7 +88,6 @@ export function initCRDTPersistence() {
       } catch (err) {
         console.error(`[CRDT Persistence] Error during writeState for ${docName}:`, err);
       } finally {
-        // Room is being discarded — drop timers/meta so stale callbacks no-op
         const current = docMeta.get(docName);
         if (current && current.generation === generation) {
           if (current.compactionTimeout) clearTimeout(current.compactionTimeout);
@@ -101,7 +98,7 @@ export function initCRDTPersistence() {
   });
 }
 
-async function compactDoc(docName: string, ydoc: any, generation?: number) {
+async function compactDoc(docName: string, ydoc: WSSharedDoc, generation?: number) {
   const meta = docMeta.get(docName);
   if (!meta) return;
   if (generation !== undefined && meta.generation !== generation) return;
@@ -115,7 +112,6 @@ async function compactDoc(docName: string, ydoc: any, generation?: number) {
     const snapshot = Y.encodeStateAsUpdate(ydoc);
     db.saveSnapshotAndPruneUpdates(docName, snapshot, maxUpdateId);
 
-    // Re-check generation after encode (room may have been recycled)
     const still = docMeta.get(docName);
     if (!still || (generation !== undefined && still.generation !== generation)) {
       return;
@@ -157,13 +153,13 @@ export function destroyRoom(docName: string) {
   }
   docMeta.delete(docName);
 
-  const liveDoc = docs.get(docName) as any;
+  const liveDoc = docs.get(docName);
   if (!liveDoc) return;
 
   try {
     if (liveDoc.conns && typeof liveDoc.conns.forEach === 'function') {
-      const sockets: any[] = [];
-      liveDoc.conns.forEach((_subs: unknown, conn: any) => sockets.push(conn));
+      const sockets: WebSocketLike[] = [];
+      liveDoc.conns.forEach((_subs, conn) => sockets.push(conn as WebSocketLike));
       for (const conn of sockets) {
         try {
           conn.close(1000, 'Document deleted');
@@ -184,10 +180,12 @@ export function destroyRoom(docName: string) {
   docs.delete(docName);
 }
 
+type WebSocketLike = { close: (code?: number, reason?: string) => void };
+
 /** Flush every live room to SQLite (graceful shutdown). */
 export async function flushAllRooms() {
-  const entries: Array<[string, any]> = [];
-  docs.forEach((ydoc: any, name: string) => entries.push([name, ydoc]));
+  const entries: Array<[string, WSSharedDoc]> = [];
+  docs.forEach((ydoc, name) => entries.push([name, ydoc]));
 
   for (const [name, ydoc] of entries) {
     const meta = docMeta.get(name);
@@ -203,4 +201,4 @@ export async function flushAllRooms() {
   }
 }
 
-export { docs, utils, docMeta };
+export { docs, docMeta };

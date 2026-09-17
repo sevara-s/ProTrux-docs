@@ -7,10 +7,16 @@
     "dev": "concurrently -n \"server,web\" -c \"blue,green\" \"pnpm --filter @protrux/server dev\" \"pnpm --filter @protrux/web dev\"",
     "build": "pnpm --filter @protrux/shared build && pnpm --filter @protrux/server build && pnpm --filter @protrux/web build",
     "start": "pnpm --filter @protrux/server start",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "eslint \"apps/**/*.{ts,tsx}\" \"packages/**/*.ts\" \"tests/**/*.ts\" --max-warnings 50"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.26.0",
+    "@typescript-eslint/parser": "^8.26.0",
     "concurrently": "^9.1.2",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "fastify": "^5.12.4",
     "typescript": "^5.8.2",
     "vitest": "^3.0.7",
     "yjs": "^13.6.32"

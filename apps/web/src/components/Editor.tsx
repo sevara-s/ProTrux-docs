@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useEditor, EditorContent, Extension } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
@@ -13,59 +13,16 @@ import TextStyle from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import FontFamily from '@tiptap/extension-font-family';
 import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
+import { ResizableImage } from '@/extensions/ResizableImage';
+import { FontSize } from '@/extensions/FontSize';
 import { CRDTManager } from '../services/crdt';
 import { DocsToolbar } from './DocsToolbar';
 import { DocsRuler } from './DocsRuler';
 import { ModalProvider } from '@/providers/modal-provider';
 import { useDocumentStore } from '@/store/document-store';
 import { inchesToPx, usePageStore } from '@/store/page-store';
+import { useUserStore } from '@/store/user-store';
 import { DEFAULT_DOCUMENT_CONTENT } from '@protrux/shared';
-
-/** Inline font-size mark for the format dock. */
-export const FontSize = Extension.create({
-  name: 'fontSize',
-  addOptions() {
-    return {
-      types: ['textStyle'],
-    };
-  },
-  addGlobalAttributes() {
-    return [
-      {
-        types: this.options.types,
-        attributes: {
-          fontSize: {
-            default: null,
-            parseHTML: (element) => element.style.fontSize,
-            renderHTML: (attributes) => {
-              if (!attributes.fontSize) {
-                return {};
-              }
-              return {
-                style: `font-size: ${attributes.fontSize}`,
-              };
-            },
-          },
-        },
-      },
-    ];
-  },
-  addCommands() {
-    return {
-      setFontSize:
-        (fontSize: string) =>
-        ({ chain }: any) => {
-          return chain().setMark('textStyle', { fontSize }).run();
-        },
-      unsetFontSize:
-        () =>
-        ({ chain }: any) => {
-          return chain().setMark('textStyle', { fontSize: null }).removeEmptyTextStyle().run();
-        },
-    } as any;
-  },
-});
 
 interface EditorProps {
   crdt: CRDTManager;
@@ -81,12 +38,18 @@ export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
     charsNoSpaces: 0,
     pages: 1,
   });
+  const [settling, setSettling] = useState(false);
+  const [mergeFlash, setMergeFlash] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const seededRef = useRef(false);
+  const prevSyncRef = useRef<string | null>(null);
   const pendingContent = useDocumentStore((state) => state.pendingContent);
   const setPendingContent = useDocumentStore((state) => state.setPendingContent);
   const canEdit = useDocumentStore((state) => state.canEdit);
+  const syncStatus = useUserStore((s) => s.syncStatus);
+  const isSimulatedOffline = useUserStore((s) => s.isSimulatedOffline);
+  const isForked = isSimulatedOffline || syncStatus === 'offline';
 
   const widthIn = usePageStore((s) => s.widthIn);
   const heightIn = usePageStore((s) => s.heightIn);
@@ -147,7 +110,7 @@ export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
         TextAlign.configure({
           types: ['heading', 'paragraph'],
         }),
-        Image.configure({
+        ResizableImage.configure({
           inline: true,
           allowBase64: true,
         }),
@@ -295,21 +258,41 @@ export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
     };
   }, [editor, crdt, pendingContent]);
 
+  useEffect(() => {
+    const prev = prevSyncRef.current;
+    prevSyncRef.current = syncStatus;
+    if (prev && prev !== 'synced' && syncStatus === 'synced') {
+      setSettling(true);
+      setMergeFlash(true);
+      const t1 = window.setTimeout(() => setSettling(false), 700);
+      const t2 = window.setTimeout(() => setMergeFlash(false), 900);
+      return () => {
+        window.clearTimeout(t1);
+        window.clearTimeout(t2);
+      };
+    }
+  }, [syncStatus]);
+
   return (
-    <div className="flex-1 flex flex-col min-h-0 relative select-text" style={{ background: 'var(--desk)' }}>
+    <div
+      className={`flex-1 flex flex-col min-h-0 ptx-desk relative select-text ${
+        isForked ? 'ptx-desk--forked' : ''
+      }`}
+    >
+      {mergeFlash && <div className="ptx-merge-flash" aria-hidden />}
       {!canEdit && (
-        <div className="shrink-0 px-4 py-2.5 border-b border-line bg-accent-soft text-center text-xs font-medium text-fg">
-          View only — you can read this document, but editing is turned off.
+        <div className="shrink-0 px-4 py-2.5 border-b border-white/10 bg-black/30 text-center text-xs font-mono uppercase tracking-widest text-accent relative z-10">
+          View only — signal is receive-only on this desk.
         </div>
       )}
-      <div className="shrink-0 bg-elevated border-b border-line z-20">
+      <div className="shrink-0 z-20 relative">
         <DocsToolbar editor={editor} zoom={zoom} onZoomChange={setZoom} />
       </div>
-      <div className="shrink-0 z-10">
+      <div className="shrink-0 z-10 relative">
         <DocsRuler />
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-auto py-8 px-4 flex justify-center min-h-0">
+      <div className="flex-1 overflow-y-auto overflow-x-auto py-10 px-4 flex justify-center min-h-0 relative z-[2]">
         <div
           ref={editorRef}
           style={{
@@ -317,10 +300,10 @@ export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
             transformOrigin: 'top center',
             width: pageWidthPx,
           }}
-          className="transition-transform duration-200 ease-out mb-24 animate-rise-in shrink-0"
+          className="transition-transform duration-200 ease-out mb-24 shrink-0"
         >
           <div
-            className="editorial-paper relative"
+            className={`editorial-paper relative ${settling ? 'editorial-paper--settle' : ''}`}
             style={{
               width: pageWidthPx,
               minHeight: pageHeightPx,

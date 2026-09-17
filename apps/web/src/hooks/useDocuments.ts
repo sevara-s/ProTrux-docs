@@ -72,7 +72,7 @@ export function useDocuments() {
       removeLocalDocument(newDoc.id);
       addDocument({ ...newDoc, isOwner: true });
       return { ...newDoc, isOwner: true };
-    } catch (err) {
+    } catch {
       const now = Date.now();
       const localDoc: DocumentMetadata = {
         id: id || `doc-${now}`,

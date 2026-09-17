@@ -1,6 +1,6 @@
 /** Shared document typography for on-screen editor parity in PDF / HTML exports. */
 export const DOCUMENT_EXPORT_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Syne:wght@500;600;700;800&display=swap');
 
   * { box-sizing: border-box; }
 
@@ -33,44 +33,45 @@ export const DOCUMENT_EXPORT_CSS = `
 
   .sheet-body h1,
   .ProseMirror h1 {
-    font-family: Fraunces, Georgia, serif;
+    font-family: Syne, Manrope, sans-serif;
     font-size: 2rem;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.15;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.04em;
     margin: 0.5em 0 0.4em;
-    color: #13201c;
+    color: #16181d;
   }
 
   .sheet-body h2,
   .ProseMirror h2 {
-    font-family: Fraunces, Georgia, serif;
-    font-size: 1.35rem;
-    font-weight: 600;
+    font-family: Syne, Manrope, sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
     line-height: 1.25;
-    letter-spacing: -0.02em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     margin: 1.3em 0 0.4em;
-    color: #1f6f5c;
+    color: #c8890a;
   }
 
   .sheet-body h3,
   .ProseMirror h3 {
-    font-family: Manrope, sans-serif;
+    font-family: Syne, Manrope, sans-serif;
     font-size: 1.05rem;
     font-weight: 700;
     margin: 1.1em 0 0.35em;
-    color: #2a3d38;
+    color: #2c3038;
   }
 
   .sheet-body h4,
   .ProseMirror h4 {
-    font-family: Manrope, sans-serif;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
+    font-weight: 500;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     margin: 1em 0 0.3em;
-    color: #1f6f5c;
+    color: #c8890a;
   }
 
   .sheet-body ul,
@@ -88,18 +89,18 @@ export const DOCUMENT_EXPORT_CSS = `
 
   .sheet-body blockquote,
   .ProseMirror blockquote {
-    border-left: 3px solid #1f6f5c;
-    background: linear-gradient(90deg, rgba(31, 111, 92, 0.12), transparent);
+    border-left: 3px solid #c8890a;
+    background: linear-gradient(90deg, rgba(200, 137, 10, 0.1), transparent);
     padding: 0.75rem 1.1rem;
     margin: 1.25em 0;
     font-style: italic;
-    color: #2a3d38;
+    color: #2c3038;
   }
 
   .sheet-body code,
   .ProseMirror code {
-    background: rgba(31, 111, 92, 0.12);
-    color: #1f6f5c;
+    background: rgba(200, 137, 10, 0.12);
+    color: #9a6b08;
     padding: 0.12rem 0.35rem;
     border-radius: 4px;
     font-family: 'IBM Plex Mono', Menlo, monospace;
@@ -108,11 +109,11 @@ export const DOCUMENT_EXPORT_CSS = `
 
   .sheet-body pre,
   .ProseMirror pre {
-    background: #13201c;
-    color: #f2f7f5;
+    background: #12141a;
+    color: #f3efe6;
     font-family: 'IBM Plex Mono', Menlo, monospace;
     padding: 1rem 1.15rem;
-    border-radius: 10px;
+    border-radius: 4px;
     overflow-x: auto;
     margin: 1.3em 0;
   }
@@ -121,8 +122,8 @@ export const DOCUMENT_EXPORT_CSS = `
   .ProseMirror hr {
     border: none;
     height: 1px;
-    background: linear-gradient(90deg, transparent, #1f6f5c, transparent);
-    opacity: 0.35;
+    background: linear-gradient(90deg, transparent, #c8890a, transparent);
+    opacity: 0.45;
     margin: 2rem 0;
   }
 
@@ -130,6 +131,9 @@ export const DOCUMENT_EXPORT_CSS = `
   .ProseMirror img {
     max-width: 100%;
     height: auto;
+    display: inline-block;
+    vertical-align: middle;
+    border-radius: 2px;
   }
 
   .sheet-body mark,
@@ -151,10 +155,9 @@ export const DOCUMENT_EXPORT_CSS = `
     margin-bottom: 0.4em;
     padding: 0.4rem 0.6rem;
     border-radius: 8px;
-    background: rgba(31, 111, 92, 0.12);
+    background: rgba(200, 137, 10, 0.12);
   }
 
-  /* Never print collaboration chrome */
   .collaboration-cursor__caret,
   .collaboration-cursor__label {
     display: none !important;

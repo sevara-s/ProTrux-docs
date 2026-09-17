@@ -30,6 +30,10 @@ export interface CRDTManagerOptions {
   onSynced?: (isSynced: boolean) => void;
   /** Restore simulate-offline across reloads (sessionStorage). */
   startSimulatedOffline?: boolean;
+  /** Browser owner key — sent on WS so private rooms open for the owner. */
+  ownerKey?: string;
+  /** Share link token (`k`) for guest access to owned rooms. */
+  shareToken?: string | null;
 }
 
 export class CRDTManager {
@@ -50,6 +54,8 @@ export class CRDTManager {
   private everConnected = false;
   private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private forceOfflineUi = false;
+  private ownerKey?: string;
+  private shareToken?: string | null;
 
   private handleOnline = () => {
     if (this.destroyed) return;
@@ -73,6 +79,8 @@ export class CRDTManager {
     this.onSynced = options.onSynced;
     this.isSimulatedOffline =
       options.startSimulatedOffline ?? readSimulatedOfflineFlag();
+    this.ownerKey = options.ownerKey;
+    this.shareToken = options.shareToken;
 
     const savedUser = sessionStorage.getItem('protrux_user_profile');
     if (savedUser) {
@@ -117,8 +125,13 @@ export class CRDTManager {
     const host = window.location.host;
     const wsUrl = `${protocol}//${host}/ws`;
 
+    const params: Record<string, string> = {};
+    if (this.ownerKey) params.ownerKey = this.ownerKey;
+    if (this.shareToken) params.k = this.shareToken;
+
     this.provider = new WebsocketProvider(wsUrl, this.docId, this.ydoc, {
       connect: !this.isSimulatedOffline && navigator.onLine,
+      params,
     });
 
     this.provider.awareness.setLocalStateField('user', {
@@ -158,7 +171,7 @@ export class CRDTManager {
           collaborators.push({
             id: String(clientID),
             name: state.user.name || 'Anonymous',
-            color: state.user.color || '#1f6f5c',
+            color: state.user.color || '#c8890a',
             cursor: state.cursor || null,
             lastActive: Date.now(),
           });

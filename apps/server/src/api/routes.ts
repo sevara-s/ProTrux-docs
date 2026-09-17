@@ -3,43 +3,14 @@ import { normalizeDocId, type DocumentAccessMode } from '@protrux/shared';
 import { db } from '../db/database.js';
 import { docs, destroyRoom } from '../crdt/persistence.js';
 import * as Y from 'yjs';
+import {
+  readOwnerKey,
+  readShareToken,
+  canOpenDocument,
+  canEditDocument,
+} from '../access.js';
 
 const ACCESS_MODES: DocumentAccessMode[] = ['private', 'view', 'edit'];
-
-function readOwnerKey(req: { headers: Record<string, unknown>; query?: unknown }): string | undefined {
-  const header = req.headers['x-owner-key'];
-  if (typeof header === 'string' && header.trim()) return header.trim();
-  const q = (req.query || {}) as { ownerKey?: string };
-  if (typeof q.ownerKey === 'string' && q.ownerKey.trim()) return q.ownerKey.trim();
-  return undefined;
-}
-
-function readShareToken(req: { query?: unknown }): string | undefined {
-  const q = (req.query || {}) as { k?: string; shareToken?: string };
-  const token = q.k || q.shareToken;
-  return typeof token === 'string' && token.trim() ? token.trim() : undefined;
-}
-
-function canOpenDocument(
-  doc: { accessMode?: string; ownerKey?: string; shareToken?: string },
-  ownerKey?: string,
-  shareToken?: string
-): boolean {
-  const mode = doc.accessMode || 'edit';
-  if (mode !== 'private') return true;
-  if (ownerKey && doc.ownerKey && ownerKey === doc.ownerKey) return true;
-  // Private docs stay closed to link guests — even with a token.
-  void shareToken;
-  return false;
-}
-
-function canEditDocument(
-  doc: { accessMode?: string; ownerKey?: string },
-  ownerKey?: string
-): boolean {
-  if (ownerKey && doc.ownerKey && ownerKey === doc.ownerKey) return true;
-  return (doc.accessMode || 'edit') === 'edit';
-}
 
 export async function registerRoutes(app: FastifyInstance) {
   app.get('/api/health', async (_req, reply) => {
@@ -54,7 +25,7 @@ export async function registerRoutes(app: FastifyInstance) {
     }
 
     let activeConnections = 0;
-    docs.forEach((doc: any) => {
+    docs.forEach((doc) => {
       activeConnections += doc.conns?.size ?? 0;
     });
 
@@ -88,9 +59,10 @@ export async function registerRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: 'Document not found' });
     }
     if (!canOpenDocument(raw, ownerKey, shareToken)) {
+      const privateDoc = (raw.accessMode || 'edit') === 'private';
       return reply.status(403).send({
-        error: 'This document is private',
-        accessMode: 'private',
+        error: privateDoc ? 'This document is private' : 'Invalid share link',
+        accessMode: raw.accessMode || 'edit',
       });
     }
 
@@ -151,7 +123,6 @@ export async function registerRoutes(app: FastifyInstance) {
       if (!ownerKey) {
         return reply.status(403).send({ error: 'Only the owner can change access' });
       }
-      // Legacy docs without an owner: first client to set access claims ownership
       if (!raw.ownerKey) {
         db.claimOwnerIfEmpty(id, ownerKey);
         raw.ownerKey = ownerKey;
@@ -194,7 +165,6 @@ export async function registerRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: 'Document not found' });
     }
 
-    // Prefer owner-only delete when an owner is set; allow delete if no owner (legacy)
     if (existing.ownerKey && (!ownerKey || ownerKey !== existing.ownerKey)) {
       return reply.status(403).send({ error: 'Only the owner can delete this document' });
     }
@@ -217,31 +187,36 @@ export async function registerRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: 'Document not found' });
     }
     if (!canOpenDocument(meta, ownerKey, shareToken)) {
-      return reply.status(403).send({ error: 'This document is private' });
+      return reply.status(403).send({
+        error: (meta.accessMode || 'edit') === 'private' ? 'This document is private' : 'Invalid share link',
+      });
     }
 
-    let ydoc = docs.get(id);
+    const live = docs.get(id);
+    let exportDoc: Y.Doc;
     let shouldDestroy = false;
 
-    if (!ydoc) {
-      ydoc = new Y.Doc();
+    if (live) {
+      exportDoc = live;
+    } else {
+      exportDoc = new Y.Doc();
       const snapshot = db.getSnapshot(id);
       if (snapshot) {
-        Y.applyUpdate(ydoc, snapshot);
+        Y.applyUpdate(exportDoc, snapshot);
       }
       const updates = db.getUpdates(id);
       for (const update of updates) {
-        Y.applyUpdate(ydoc, update);
+        Y.applyUpdate(exportDoc, update);
       }
       shouldDestroy = true;
     }
 
-    const fragment = ydoc.getXmlFragment('default');
+    const fragment = exportDoc.getXmlFragment('default');
     const rawXml = fragment.toString();
     const plainText = rawXml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
     if (shouldDestroy) {
-      ydoc.destroy();
+      exportDoc.destroy();
     }
 
     return {

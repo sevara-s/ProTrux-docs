@@ -2,13 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { User } from 'lucide-react';
 
 const IDENTITY_COLORS = [
-  '#1f6f5c',
-  '#164f42',
+  '#c8890a',
+  '#2f5aa8',
+  '#1a7a6d',
+  '#c45c26',
+  '#6b4ea2',
+  '#b45309',
   '#0e7490',
-  '#1e3a5f',
-  '#3f6212',
-  '#7c2d12',
-  '#4c1d95',
   '#9a3412',
 ];
 

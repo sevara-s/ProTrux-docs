@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { X, UploadCloud, FileText, Search, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, UploadCloud, FileText, Search } from 'lucide-react';
 import { useModal } from '@/store/modal-store';
 import { useDocumentStore } from '@/store/document-store';
+import { formatDate } from '@/lib/utils';
 import mammoth from 'mammoth';
 
 interface OpenFileModalProps {
@@ -230,7 +231,7 @@ export const OpenFileModal: React.FC<OpenFileModalProps> = ({
                       </span>
                     </div>
                     <span className="text-[11px] text-fg-muted">
-                      {new Date(doc.updatedAt).toLocaleDateString()}
+                      {formatDate(doc.updatedAt)}
                     </span>
                   </div>
                 ))}

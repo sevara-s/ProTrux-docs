@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal, flushSync } from 'react-dom';
 import { Wifi, WifiOff, ChevronDown, Hexagon, Share2 } from 'lucide-react';
 import { Editor } from '@tiptap/react';
 import { useModal, useModalStore } from '@/store/modal-store';
@@ -15,10 +16,10 @@ import {
 } from '@/services/export';
 
 export const DEMO_PERSONAS = [
-  { name: 'Elena Rostova', color: '#164f42', role: 'Lead Author' },
-  { name: 'Marcus Vance', color: '#1f6f5c', role: 'Systems' },
-  { name: 'Liam Chen', color: '#3d8f7a', role: 'Staff Eng' },
-  { name: 'Sophia Lin', color: '#5aab94', role: 'Design' },
+  { name: 'Elena Rostova', color: '#c8890a', role: 'Lead Author' },
+  { name: 'Marcus Vance', color: '#2f5aa8', role: 'Systems' },
+  { name: 'Liam Chen', color: '#1a7a6d', role: 'Staff Eng' },
+  { name: 'Sophia Lin', color: '#c45c26', role: 'Design' },
 ];
 
 interface DocsHeaderProps {
@@ -30,8 +31,8 @@ interface DocsHeaderProps {
 }
 
 const menuBtn = (active: boolean) =>
-  `px-2.5 py-1 rounded-md text-[11px] font-semibold tracking-wide uppercase transition-colors ${
-    active ? 'bg-accent/20 text-accent' : 'text-chrome-muted hover:text-chrome-fg hover:bg-white/5'
+  `px-2.5 py-1 rounded-md text-[11px] font-semibold tracking-wide uppercase transition-colors cursor-pointer ${
+    active ? 'bg-accent/20 text-accent' : 'text-chrome-fg/80 hover:text-chrome-fg hover:bg-white/10'
   }`;
 
 export const DocsHeader: React.FC<DocsHeaderProps> = ({
@@ -45,7 +46,6 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
   const currentDocId = useDocumentStore((s) => s.currentDocId);
   const updateDocTitle = useDocumentStore((s) => s.updateDocTitle);
   const canEdit = useDocumentStore((s) => s.canEdit);
-  const accessMode = useDocumentStore((s) => s.accessMode);
 
   const currentUser = useUserStore((s) => s.currentUser);
   const setCurrentUser = useUserStore((s) => s.setCurrentUser);
@@ -64,8 +64,10 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
   const [titleInput, setTitleInput] = useState(title);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
-  const menuContainerRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const personaBtnRef = useRef<HTMLButtonElement>(null);
+  const [personaPos, setPersonaPos] = useState({ top: 0, left: 0 });
 
   useEffect(() => setTitleInput(title), [title]);
   useEffect(() => {
@@ -76,14 +78,40 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
   }, [isEditingTitle]);
 
   useEffect(() => {
+    if (!activeMenu) return;
     const onOut = (e: MouseEvent) => {
-      if (menuContainerRef.current && !menuContainerRef.current.contains(e.target as Node)) {
-        setActiveMenu(null);
-      }
+      const target = e.target as Node;
+      if (headerRef.current?.contains(target)) return;
+      if ((target as HTMLElement).closest?.('[data-header-menu]')) return;
+      setActiveMenu(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActiveMenu(null);
     };
     document.addEventListener('mousedown', onOut);
-    return () => document.removeEventListener('mousedown', onOut);
-  }, []);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onOut);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [activeMenu]);
+
+  useLayoutEffect(() => {
+    if (activeMenu !== 'persona' || !personaBtnRef.current) return;
+    const place = () => {
+      const rect = personaBtnRef.current!.getBoundingClientRect();
+      const width = 256;
+      const left = Math.min(rect.right - width, window.innerWidth - width - 8);
+      setPersonaPos({ top: rect.bottom + 4, left: Math.max(8, left) });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [activeMenu]);
 
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
@@ -98,9 +126,12 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
     format: 'md' | 'html' | 'txt' | 'print' | 'pdf' | 'docx'
   ) => {
     if (!editor) return;
-    setActiveMenu(null);
+    // Tear down portaled menus before print so they never appear in the sheet
+    flushSync(() => setActiveMenu(null));
+    document.querySelectorAll('[data-header-menu]').forEach((el) => el.remove());
+
     if (format === 'print') {
-      window.print();
+      requestAnimationFrame(() => window.print());
       return;
     }
     if (format === 'pdf') {
@@ -140,52 +171,77 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
     } else exportPlainText(editor, title);
   };
 
-  const syncChip = () => {
-    if (isSimulatedOffline || syncStatus === 'offline') {
-      return (
-        <span className="ptx-chip bg-accent-soft text-accent border-accent/30">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse-dot" />
-          Offline
-        </span>
-      );
-    }
-    if (syncStatus === 'connecting') {
-      return (
-        <span className="ptx-chip text-chrome-muted border-white/10 bg-white/5">
-          <span className="w-1.5 h-1.5 rounded-full bg-chrome-muted animate-pulse" />
-          Connecting
-        </span>
-      );
-    }
-    if (syncStatus === 'syncing' || syncStatus === 'error') {
-      return (
-        <span className="ptx-chip bg-accent/15 text-accent border-accent/25">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-          {syncStatus === 'error' ? 'Retry' : 'Merge'}
-        </span>
-      );
-    }
-    return (
-      <span className="ptx-chip bg-accent/20 text-accent border-accent/30">
-        <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-        Synced
-      </span>
-    );
+  const syncLabel = () => {
+    if (isSimulatedOffline || syncStatus === 'offline') return 'LOCAL FORK';
+    if (syncStatus === 'connecting') return 'TUNING';
+    if (syncStatus === 'syncing') return 'MERGING';
+    if (syncStatus === 'error') return 'RETRY';
+    return 'MERGED';
   };
 
-  const Menu: React.FC<{ id: string; label: string; children: React.ReactNode; wide?: string }> = ({
+  const peerCount = 1 + collaborators.length;
+
+  const Menu: React.FC<{ id: string; label: string; children: React.ReactNode; wide?: number }> = ({
     id,
     label,
     children,
-    wide = 'w-56',
-  }) => (
-    <div className="relative">
-      <button type="button" onClick={() => setActiveMenu(activeMenu === id ? null : id)} className={menuBtn(activeMenu === id)}>
-        {label}
-      </button>
-      {activeMenu === id && <div className={`absolute left-0 mt-2 ${wide} ptx-menu`}>{children}</div>}
-    </div>
-  );
+    wide = 224,
+  }) => {
+    const btnRef = useRef<HTMLButtonElement>(null);
+    const open = activeMenu === id;
+    const [pos, setPos] = useState({ top: 0, left: 0 });
+
+    useLayoutEffect(() => {
+      if (!open || !btnRef.current) return;
+      const place = () => {
+        const rect = btnRef.current!.getBoundingClientRect();
+        const left = Math.min(rect.left, window.innerWidth - wide - 8);
+        setPos({ top: rect.bottom + 4, left: Math.max(8, left) });
+      };
+      place();
+      window.addEventListener('resize', place);
+      window.addEventListener('scroll', place, true);
+      return () => {
+        window.removeEventListener('resize', place);
+        window.removeEventListener('scroll', place, true);
+      };
+    }, [open, wide]);
+
+    return (
+      <div className="relative shrink-0">
+        <button
+          ref={btnRef}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setActiveMenu(open ? null : id);
+          }}
+          className={menuBtn(open)}
+        >
+          {label}
+        </button>
+        {open &&
+          typeof document !== 'undefined' &&
+          createPortal(
+            <div
+              data-header-menu
+              className="ptx-menu"
+              style={{
+                position: 'fixed',
+                top: pos.top,
+                left: pos.left,
+                width: wide,
+                zIndex: 9999,
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {children}
+            </div>,
+            document.body
+          )}
+      </div>
+    );
+  };
 
   const item = (label: string, onClick: () => void, hint?: string, danger?: boolean) => (
     <button
@@ -202,20 +258,20 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
   );
 
   return (
-    <header className="ptx-chrome px-4 py-2.5 select-none sticky top-0 z-30">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+    <header ref={headerRef} className="ptx-chrome px-3 sm:px-4 py-1.5 select-none sticky top-0 z-40">
+      <div className="flex items-center justify-between gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <button type="button" onClick={onNavigateHome} className="flex items-center gap-2 shrink-0 group" title="Home">
-            <div className="w-8 h-8 rounded-lg bg-accent text-accent-fg flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Hexagon className="w-4 h-4" strokeWidth={2.5} />
+            <div className="w-7 h-7 rounded-md bg-accent text-accent-fg flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Hexagon className="w-3.5 h-3.5" strokeWidth={2.5} />
             </div>
-            <span className="ptx-mark text-lg text-chrome-fg hidden md:inline leading-none">ProTrux</span>
+            <span className="ptx-mark text-base text-chrome-fg hidden lg:inline leading-none tracking-tight">ProTrux</span>
           </button>
 
-          <div className="w-px h-8 bg-white/10 hidden sm:block" />
+          <div className="w-px h-6 bg-white/10 hidden sm:block shrink-0" />
 
-          <div className="min-w-0 flex-1" ref={menuContainerRef}>
-            <div className="flex items-center gap-2 flex-wrap">
+          <div className="min-w-0 flex-1 overflow-visible">
+            <div className="flex items-center gap-2 min-w-0">
               {isEditingTitle ? (
                 <input
                   ref={titleInputRef}
@@ -230,7 +286,7 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
                       setIsEditingTitle(false);
                     }
                   }}
-                  className="ptx-mark text-base bg-white/10 border border-accent/40 rounded-md px-2 py-0.5 text-chrome-fg outline-none min-w-[160px] max-w-md"
+                  className="ptx-mark text-sm bg-white/10 border border-accent/40 rounded-md px-2 py-0.5 text-chrome-fg outline-none min-w-[120px] max-w-[240px]"
                 />
               ) : (
                 <button
@@ -238,190 +294,172 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
                   onClick={() => {
                     if (canEdit) setIsEditingTitle(true);
                   }}
-                  className={`ptx-mark text-base text-chrome-fg truncate max-w-[220px] md:max-w-md text-left ${
+                  className={`ptx-mark text-sm text-chrome-fg truncate max-w-[140px] sm:max-w-[220px] text-left ${
                     canEdit ? 'hover:text-accent' : 'cursor-default'
                   }`}
                 >
                   {title || 'Untitled document'}
                 </button>
               )}
-              {syncChip()}
-              {!canEdit && (
-                <span className="text-[10px] font-mono uppercase tracking-wide text-accent/90 px-2 py-0.5 rounded-md bg-accent/15 border border-accent/25">
-                  View only
-                </span>
-              )}
-              {canEdit && accessMode === 'private' && (
-                <span className="text-[10px] font-mono uppercase tracking-wide text-chrome-muted px-2 py-0.5 rounded-md bg-white/5 border border-white/10">
-                  Private
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-0.5 mt-1.5">
-              <Menu id="file" label="File" wide="w-64">
-                {item('New document', onNewDocument, '⌘N')}
-                {item('Home', onNavigateHome)}
-                {item('Open / Import', () => useModalStore.getState().openModal('open-file'), '⌘O')}
-                <div className="h-px bg-line my-1" />
-                {item('Page setup…', () => pageSetupModal.openModal())}
-                <div className="h-px bg-line my-1" />
-                <p className="px-3.5 py-1 text-[10px] font-mono uppercase tracking-widest text-fg-muted">
-                  Download
-                </p>
-                {item('PDF document', () => void handleDownload('pdf'), '.pdf')}
-                {item('Microsoft Word', () => void handleDownload('docx'), '.docx')}
-                {item('Markdown', () => void handleDownload('md'), '.md')}
-                {item('Web page', () => void handleDownload('html'), '.html')}
-                {item('Plain text', () => void handleDownload('txt'), '.txt')}
-                {item('Print', () => void handleDownload('print'), '⌘P')}
-                <div className="h-px bg-line my-1" />
-                {item('Move to trash', onDeleteDocument, undefined, true)}
-              </Menu>
-              <Menu id="edit" label="Edit">
-                {item('Undo', () => editor?.commands.undo(), '⌘Z')}
-                {item('Redo', () => editor?.commands.redo(), '⌘Y')}
-                <div className="h-px bg-line my-1" />
-                {item('Select all', () => editor?.chain().focus().selectAll().run(), '⌘A')}
-              </Menu>
-              <Menu id="insert" label="Insert">
-                {item('Horizontal rule', () => editor?.chain().focus().setHorizontalRule().run())}
-                {item('Section break', () => editor?.chain().focus().insertContent('<hr /><p></p>').run())}
-                {item("Today's date", () => {
-                  const d = new Date().toLocaleDateString(undefined, {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  });
-                  editor?.chain().focus().insertContent(`<strong>${d}</strong> `).run();
-                })}
-              </Menu>
-              <Menu id="format" label="Format">
-                {item('Bold', () => editor?.chain().focus().toggleBold().run(), '⌘B')}
-                {item('Italic', () => editor?.chain().focus().toggleItalic().run(), '⌘I')}
-                {item('Underline', () => editor?.chain().focus().toggleUnderline().run(), '⌘U')}
-                <div className="h-px bg-line my-1" />
-                {item('Clear marks', () => editor?.chain().focus().unsetAllMarks().clearNodes().run())}
-              </Menu>
-              <Menu id="tools" label="Tools" wide="w-64">
-                {item('Word count', () => wordCountModal.openModal())}
-                {item('Fullscreen', () => {
-                  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-                  else document.exitFullscreen();
-                })}
-                {item(isSimulatedOffline ? 'Restore network' : 'Simulate offline', toggleSimulatedOffline)}
-              </Menu>
+              <span className="ptx-signal tabular-nums shrink-0 hidden sm:inline">
+                {syncLabel()}
+                <span className="text-chrome-muted"> · </span>
+                {peerCount}
+              </span>
+              <div className="flex items-center gap-0.5 ml-0.5 shrink-0">
+                <Menu id="file" label="File" wide={256}>
+                  {item('New document', onNewDocument, '⌘N')}
+                  {item('Home', onNavigateHome)}
+                  {item('Open / Import', () => useModalStore.getState().openModal('open-file'), '⌘O')}
+                  <div className="h-px bg-line my-1" />
+                  {item('Page setup…', () => pageSetupModal.openModal())}
+                  <div className="h-px bg-line my-1" />
+                  <p className="px-3.5 py-1 text-[10px] font-mono uppercase tracking-widest text-fg-muted">
+                    Download
+                  </p>
+                  {item('PDF document', () => void handleDownload('pdf'), '.pdf')}
+                  {item('Microsoft Word', () => void handleDownload('docx'), '.docx')}
+                  {item('Markdown', () => void handleDownload('md'), '.md')}
+                  {item('Web page', () => void handleDownload('html'), '.html')}
+                  {item('Plain text', () => void handleDownload('txt'), '.txt')}
+                  {item('Print', () => void handleDownload('print'), '⌘P')}
+                  <div className="h-px bg-line my-1" />
+                  {item('Move to trash', onDeleteDocument, undefined, true)}
+                </Menu>
+                <Menu id="edit" label="Edit">
+                  {item('Undo', () => editor?.commands.undo(), '⌘Z')}
+                  {item('Redo', () => editor?.commands.redo(), '⌘Y')}
+                  <div className="h-px bg-line my-1" />
+                  {item('Select all', () => editor?.chain().focus().selectAll().run(), '⌘A')}
+                </Menu>
+                <Menu id="insert" label="Insert">
+                  {item('Horizontal rule', () => editor?.chain().focus().setHorizontalRule().run())}
+                  {item('Section break', () => editor?.chain().focus().insertContent('<hr /><p></p>').run())}
+                  {item("Today's date", () => {
+                    const d = new Date().toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    });
+                    editor?.chain().focus().insertContent(`<strong>${d}</strong> `).run();
+                  })}
+                </Menu>
+                <Menu id="format" label="Format">
+                  {item('Bold', () => editor?.chain().focus().toggleBold().run(), '⌘B')}
+                  {item('Italic', () => editor?.chain().focus().toggleItalic().run(), '⌘I')}
+                  {item('Underline', () => editor?.chain().focus().toggleUnderline().run(), '⌘U')}
+                  <div className="h-px bg-line my-1" />
+                  {item('Clear marks', () => editor?.chain().focus().unsetAllMarks().clearNodes().run())}
+                </Menu>
+                <Menu id="tools" label="Tools" wide={256}>
+                  {item('Word count', () => wordCountModal.openModal())}
+                  {item('Fullscreen', () => {
+                    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                    else document.exitFullscreen();
+                  })}
+                  {item(isSimulatedOffline ? 'Restore network' : 'Simulate offline', toggleSimulatedOffline)}
+                </Menu>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <ThemeToggle compact className="hidden sm:inline-flex" />
 
           <div className="relative">
             <button
+              ref={personaBtnRef}
               type="button"
-              onClick={() => setActiveMenu(activeMenu === 'persona' ? null : 'persona')}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-chrome-fg hover:bg-white/10 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveMenu(activeMenu === 'persona' ? null : 'persona');
+              }}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 border border-white/10 text-xs text-chrome-fg hover:bg-white/10 transition-colors"
               title="Change who you appear as to other users"
             >
-              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: currentUser.color }} />
-              <span className="font-semibold truncate max-w-[110px]">
-                <span className="text-chrome-muted font-medium hidden xl:inline">You · </span>
-                {currentUser.name}
-              </span>
+              <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: currentUser.color }} />
+              <span className="font-semibold truncate max-w-[90px] hidden sm:inline">{currentUser.name}</span>
               <ChevronDown className="w-3 h-3 opacity-50" />
             </button>
-            {activeMenu === 'persona' && (
-              <div className="absolute right-0 mt-2 w-64 ptx-menu">
-                <p className="px-3.5 py-1.5 text-[10px] font-mono uppercase tracking-widest text-fg-muted">
-                  Editing as
-                </p>
-                <p className="px-3.5 pb-2 text-[10px] text-fg-muted leading-snug">
-                  Choose a display name so others can see who is typing.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    useUserStore.getState().requestIdentityEdit();
-                    setActiveMenu(null);
+            {activeMenu === 'persona' &&
+              typeof document !== 'undefined' &&
+              createPortal(
+                <div
+                  data-header-menu
+                  className="ptx-menu"
+                  style={{
+                    position: 'fixed',
+                    top: personaPos.top,
+                    left: personaPos.left,
+                    width: 256,
+                    zIndex: 9999,
                   }}
-                  className="ptx-menu-item !text-accent font-semibold"
+                  onMouseDown={(e) => e.stopPropagation()}
                 >
-                  Enter my name…
-                </button>
-                <div className="h-px bg-line my-1" />
-                {DEMO_PERSONAS.map((p) => (
+                  <p className="px-3.5 py-1.5 text-[10px] font-mono uppercase tracking-widest text-fg-muted">
+                    Signal as
+                  </p>
                   <button
-                    key={p.name}
                     type="button"
                     onClick={() => {
-                      setCurrentUser({ name: p.name, color: p.color });
-                      useUserStore.getState().markIdentityChosen();
-                      editor?.commands.updateUser?.({ name: p.name, color: p.color });
+                      useUserStore.getState().requestIdentityEdit();
                       setActiveMenu(null);
                     }}
-                    className={`ptx-menu-item ${currentUser.name === p.name ? '!bg-accent-soft !text-accent font-bold' : ''}`}
+                    className="ptx-menu-item !text-accent font-semibold"
                   >
-                    <span className="flex items-center gap-2.5">
-                      <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: p.color }} />
-                      <span>
-                        <span className="block text-xs">{p.name}</span>
-                        <span className="block text-[10px] text-fg-muted font-normal">{p.role}</span>
-                      </span>
-                    </span>
+                    Enter my name…
                   </button>
-                ))}
-              </div>
-            )}
+                  <div className="h-px bg-line my-1" />
+                  {DEMO_PERSONAS.map((p) => (
+                    <button
+                      key={p.name}
+                      type="button"
+                      onClick={() => {
+                        setCurrentUser({ name: p.name, color: p.color });
+                        useUserStore.getState().markIdentityChosen();
+                        editor?.commands.updateUser?.({ name: p.name, color: p.color });
+                        setActiveMenu(null);
+                      }}
+                      className={`ptx-menu-item ${currentUser.name === p.name ? '!bg-accent-soft !text-accent font-bold' : ''}`}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: p.color }} />
+                        <span>
+                          <span className="block text-xs">{p.name}</span>
+                          <span className="block text-[10px] text-fg-muted font-normal">{p.role}</span>
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>,
+                document.body
+              )}
           </div>
 
           <button
             type="button"
             onClick={toggleSimulatedOffline}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold border transition-all ${
               isSimulatedOffline
                 ? 'bg-accent text-accent-fg border-accent'
                 : 'bg-white/5 text-chrome-fg border-white/10 hover:bg-white/10'
             }`}
+            title={isSimulatedOffline ? 'Rejoin' : 'Fork offline'}
           >
             {isSimulatedOffline ? <WifiOff className="w-3.5 h-3.5" /> : <Wifi className="w-3.5 h-3.5" />}
-            <span className="hidden xl:inline">{isSimulatedOffline ? 'Reconnect' : 'Offline'}</span>
+            <span className="hidden xl:inline font-mono tracking-wide uppercase text-[10px]">
+              {isSimulatedOffline ? 'Rejoin' : 'Fork'}
+            </span>
           </button>
-
-          <div className="flex items-center gap-1.5">
-            {collaborators.length > 0 ? (
-              <>
-                <div className="flex -space-x-1.5">
-                  {collaborators.slice(0, 4).map((c) => (
-                    <div
-                      key={c.id}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-accent-fg ring-2 ring-chrome"
-                      style={{ backgroundColor: c.color }}
-                      title={c.name}
-                    >
-                      {c.name.charAt(0)}
-                    </div>
-                  ))}
-                </div>
-                <span className="hidden md:inline text-[10px] font-mono text-chrome-muted max-w-[140px] truncate">
-                  {collaborators.map((c) => c.name.split(' ')[0]).join(', ')}
-                </span>
-              </>
-            ) : (
-              <span className="hidden lg:inline text-[10px] font-mono text-chrome-muted">
-                Only you
-              </span>
-            )}
-          </div>
 
           <button
             type="button"
             onClick={shareModal.openModal}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-accent hover:brightness-110 text-accent-fg rounded-lg text-xs font-bold transition-all shadow-glow"
+            className="flex items-center gap-1 px-2.5 py-1 bg-accent hover:brightness-110 text-accent-fg rounded-md text-xs font-bold transition-all shadow-glow"
           >
             <Share2 className="w-3.5 h-3.5" />
-            Share
+            <span className="hidden sm:inline">Share</span>
           </button>
         </div>
       </div>
