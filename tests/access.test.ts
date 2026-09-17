@@ -21,10 +21,14 @@ describe('Document ACL', () => {
     expect(canOpenDocument(doc, undefined, 'tok-abc')).toBe(false);
   });
 
-  it('requires share token for guests on owned view/edit docs', () => {
+  it('lets guests open edit/view docs by link (doc id), without requiring k', () => {
+    expect(canOpenDocument(owned)).toBe(true);
     expect(canOpenDocument(owned, undefined, 'tok-abc')).toBe(true);
+    expect(canOpenDocument({ ...owned, accessMode: 'view' })).toBe(true);
+  });
+
+  it('rejects an explicitly wrong share token', () => {
     expect(canOpenDocument(owned, undefined, 'wrong')).toBe(false);
-    expect(canOpenDocument(owned)).toBe(false);
   });
 
   it('allows unowned legacy rooms without a token', () => {
@@ -42,8 +46,9 @@ describe('Document ACL', () => {
   it('resolveWsAccess returns reason codes', () => {
     expect(resolveWsAccess(null).canOpen).toBe(false);
     expect(resolveWsAccess({ ...owned, accessMode: 'private' }).reason).toMatch(/private/i);
-    expect(resolveWsAccess(owned).reason).toMatch(/share/i);
+    expect(resolveWsAccess(owned, undefined, 'wrong').reason).toMatch(/share/i);
     expect(resolveWsAccess(owned, 'owner-a')).toEqual({ canOpen: true, canEdit: true });
+    expect(resolveWsAccess(owned)).toEqual({ canOpen: true, canEdit: true });
   });
 
   it('parses owner + share credentials from WS URLs', () => {

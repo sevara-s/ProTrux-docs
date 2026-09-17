@@ -43,8 +43,8 @@ export function readOwnerKeyFromUrl(url: string): string | undefined {
  * Policy (enforced on REST + WS — not demo-only):
  * - Owner always opens
  * - private → owner only
- * - Owned view/edit → guests need the share token (`k`)
- * - Unowned legacy/welcome rooms stay open (no owner claimed yet)
+ * - view / edit → anyone with the document link (doc id) may open
+ *   (optional `k` still accepted; wrong `k` is rejected)
  */
 export function canOpenDocument(
   doc: AccessDoc,
@@ -56,8 +56,9 @@ export function canOpenDocument(
   const mode = (doc.accessMode || 'edit') as DocumentAccessMode;
   if (mode === 'private') return false;
 
-  if (doc.ownerKey && doc.shareToken) {
-    return Boolean(shareToken && shareToken === doc.shareToken);
+  // Explicit wrong token → reject; missing token is OK for view/edit links
+  if (shareToken && doc.shareToken && shareToken !== doc.shareToken) {
+    return false;
   }
 
   return true;

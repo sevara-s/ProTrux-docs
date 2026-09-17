@@ -117,8 +117,12 @@ flowchart TB
 - **Server:** Fastify + `ws`; SQLite via Node `DatabaseSync` — no external DB required
 - **Client durability:** every edit is persisted in IndexedDB; Fork flag survives refresh (`sessionStorage`)
 - **Offline creates:** document metadata can queue in `localStorage` and flush when the API returns
-- **Sharing:** private / view / edit modes enforced on **REST and WebSocket** (owner key + share token `k`); view rooms drop CRDT write frames server-side
-- **Library:** only your docs + unowned rooms; guests join via share links, not the dashboard list
+- **Sharing:** private / view / edit modes enforced on **REST and WebSocket**
+  - **private** — owner only
+  - **edit** — anyone with the document link can open & write (live collab)
+  - **view** — link holders sync live; CRDT write frames dropped server-side
+  - Share links may include token `k`; a *wrong* `k` is rejected
+- **Library:** only your docs + unowned rooms; guests join via shared URL, not the dashboard list
 - **Quality gates:** ESLint + Vitest (CRDT convergence, ACL unit tests, REST access inject)
 
 ---

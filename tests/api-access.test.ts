@@ -90,12 +90,14 @@ describe('REST document access', () => {
     });
     const token = created.json().shareToken as string;
 
-    const noTok = await app.inject({
+    // Edit mode: doc link alone is enough (simultaneous collab)
+    const byId = await app.inject({
       method: 'GET',
       url: `/api/documents/${id}`,
       headers: { 'x-owner-key': 'guest' },
     });
-    expect(noTok.statusCode).toBe(403);
+    expect(byId.statusCode).toBe(200);
+    expect(byId.json().canEdit).toBe(true);
 
     const withTok = await app.inject({
       method: 'GET',
@@ -104,6 +106,13 @@ describe('REST document access', () => {
     });
     expect(withTok.statusCode).toBe(200);
     expect(withTok.json().canEdit).toBe(true);
+
+    const wrongTok = await app.inject({
+      method: 'GET',
+      url: `/api/documents/${id}?k=wrong-token`,
+      headers: { 'x-owner-key': 'guest' },
+    });
+    expect(wrongTok.statusCode).toBe(403);
 
     await app.close();
   });

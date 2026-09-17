@@ -36,7 +36,8 @@ export function useCRDT(docId: string) {
       user: currentUser,
       startSimulatedOffline: isSimulatedOffline,
       ownerKey: getOwnerKey(),
-      shareToken: shareToken || readShareTokenFromHash(),
+      // Prefer hash `k` (guest share link); fall back to store (owner).
+      shareToken: readShareTokenFromHash() || shareToken,
       onStatusChange: (status) => setSyncStatus(status),
       onAwarenessChange: (users) => {
         setCollaborators(users);
@@ -52,9 +53,10 @@ export function useCRDT(docId: string) {
         managerRef.current = null;
       }
     };
-    // Re-bind when the room or guest share token changes.
+    // Only rebind when the room changes — remounting on shareToken churn
+    // drops live peers mid-collab.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [docId, shareToken]);
+  }, [docId]);
 
   useEffect(() => {
     if (managerRef.current) {
