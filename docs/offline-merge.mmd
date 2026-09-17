@@ -1,0 +1,22 @@
+sequenceDiagram
+    autonumber
+    actor A as Author A (online)
+    participant CA as Client A · Y.Doc + IDB
+    participant S as Server · SQLite + WS
+    participant CB as Client B · Y.Doc + IDB
+    actor B as Author B (forked)
+
+    Note over CA,CB: Synced at state vector V0
+
+    B->>CB: Fork (or real network drop)
+    Note over CB: Status → LOCAL FORK · IndexedDB keeps writing
+    B->>CB: Offline edits (ΔB)
+    A->>CA: Online edits (ΔA)
+    CA->>S: Persist ΔA
+
+    Note over B,CB: Optional: refresh while still Forked — draft survives
+    B->>CB: Rejoin / network restored
+    CB->>S: State vector VB
+    S->>CB: Missing ΔA
+    CB->>S: Offline ΔB
+    Note over A,B: Identical document · zero drops · no overwrite dialog

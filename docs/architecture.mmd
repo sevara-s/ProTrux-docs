@@ -1,0 +1,41 @@
+flowchart TB
+    subgraph Client_A ["Browser A"]
+        UI_A["Signal Desk UI<br/>TipTap / ProseMirror"]
+        Y_A["Y.Doc + XmlFragment(default)"]
+        AW_A["Awareness<br/>carets · peers"]
+        IDB_A[("IndexedDB<br/>y-indexeddb")]
+        SM_A["Sync state machine"]
+
+        UI_A <--> Y_A
+        UI_A <--> AW_A
+        Y_A <--> IDB_A
+        Y_A <--> SM_A
+        AW_A <--> SM_A
+    end
+
+    subgraph Client_B ["Browser B"]
+        UI_B["Signal Desk UI"]
+        Y_B["Y.Doc"]
+        IDB_B[("IndexedDB")]
+        SM_B["Sync state machine"]
+
+        UI_B <--> Y_B
+        Y_B <--> IDB_B
+        Y_B <--> SM_B
+    end
+
+    subgraph Hub ["Node.js · Fastify"]
+        WS["WebSocket /ws/:docId"]
+        Rooms["y-websocket rooms"]
+        Compact["Snapshot compaction"]
+        REST["REST /api/documents"]
+        DB[("SQLite WAL<br/>metadata + deltas")]
+
+        WS <--> Rooms
+        Rooms <--> Compact
+        Compact <--> DB
+        REST <--> DB
+    end
+
+    SM_A <== "Binary state vectors & updates" ==> WS
+    SM_B <== "Binary state vectors & updates" ==> WS
