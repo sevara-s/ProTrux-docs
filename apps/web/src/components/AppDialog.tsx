@@ -115,7 +115,7 @@ export const AppDialog: React.FC = () => {
             onClick={confirm}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
               danger
-                ? 'bg-ink text-chrome-fg hover:brightness-110'
+                ? 'bg-ink text-fg-invert hover:opacity-90'
                 : 'bg-accent text-accent-fg hover:brightness-110'
             }`}
           >

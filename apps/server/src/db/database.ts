@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import type { DocumentAccessMode, DocumentMetadata } from '@protrux/shared';
 
 type DocumentRow = {
@@ -39,16 +40,25 @@ const DOC_SELECT = `
   FROM documents
 `;
 
+/** Always apps/server/data — never depend on process.cwd() (root vs package). */
+function resolveDefaultDbPath(): string {
+  if (process.env.PROTRUX_DB_PATH) return process.env.PROTRUX_DB_PATH;
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  return path.resolve(here, '../../data/protrux.sqlite');
+}
+
 export class Database {
   private db: DatabaseSync;
+  public readonly dbPath: string;
 
   constructor(dbPath?: string) {
-    const defaultDir = path.resolve(process.cwd(), 'data');
+    const resolvedPath = dbPath || resolveDefaultDbPath();
+    this.dbPath = resolvedPath;
+    const defaultDir = path.dirname(resolvedPath);
     if (!fs.existsSync(defaultDir)) {
       fs.mkdirSync(defaultDir, { recursive: true });
     }
 
-    const resolvedPath = dbPath || path.join(defaultDir, 'protrux.sqlite');
     this.db = new DatabaseSync(resolvedPath);
 
     this.init();
@@ -112,6 +122,7 @@ export class Database {
     }
 
     this.seedDefaultDocumentIfEmpty();
+    console.info(`[ProTrux DB] Using ${this.dbPath}`);
   }
 
   private seedDefaultDocumentIfEmpty() {

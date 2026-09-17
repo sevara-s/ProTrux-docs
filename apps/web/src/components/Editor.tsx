@@ -22,7 +22,6 @@ import { ModalProvider } from '@/providers/modal-provider';
 import { useDocumentStore } from '@/store/document-store';
 import { inchesToPx, usePageStore } from '@/store/page-store';
 import { useUserStore } from '@/store/user-store';
-import { DEFAULT_DOCUMENT_CONTENT } from '@protrux/shared';
 
 interface EditorProps {
   crdt: CRDTManager;
@@ -207,16 +206,21 @@ export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
   }, [editor, onEditorReady]);
 
   useEffect(() => {
+    seededRef.current = false;
+  }, [crdt.docId]);
+
+  useEffect(() => {
+    // Never auto-seed welcome HTML into a live Y.Doc — setContent races WS sync
+    // and has wiped collaborative edits on refresh. Welcome copy is seeded in SQLite.
     if (!editor || !pendingContent || seededRef.current) return;
 
     let cancelled = false;
-    const tryInject = () => {
+    const tryInject = async () => {
       if (cancelled || seededRef.current) return;
-      if (!crdt.isLocalReady) {
-        setTimeout(tryInject, 50);
-        return;
-      }
-      if (editor.isEmpty) {
+      await crdt.waitUntilReadyForSeed();
+      if (cancelled || seededRef.current) return;
+
+      if (crdt.isContentEmpty()) {
         editor.commands.setContent(pendingContent);
         updateStatistics(editor);
       }
@@ -224,39 +228,11 @@ export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
       setPendingContent(null);
     };
 
-    const timer = setTimeout(tryInject, 100);
+    void tryInject();
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
   }, [editor, pendingContent, crdt, setPendingContent]);
-
-  useEffect(() => {
-    if (!editor || crdt.docId !== 'welcome-doc' || pendingContent || seededRef.current) return;
-
-    let cancelled = false;
-    const trySeed = () => {
-      if (cancelled || seededRef.current) return;
-      if (!crdt.isLocalReady) {
-        setTimeout(trySeed, 50);
-        return;
-      }
-      setTimeout(() => {
-        if (cancelled || seededRef.current) return;
-        if (editor.isEmpty) {
-          editor.commands.setContent(DEFAULT_DOCUMENT_CONTENT);
-          updateStatistics(editor);
-        }
-        seededRef.current = true;
-      }, 400);
-    };
-
-    const timer = setTimeout(trySeed, 100);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [editor, crdt, pendingContent]);
 
   useEffect(() => {
     const prev = prevSyncRef.current;

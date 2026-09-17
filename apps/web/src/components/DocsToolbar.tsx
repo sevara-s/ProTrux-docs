@@ -46,7 +46,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
   const [fontSize, setFontSize] = useState(11);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [textColor, setTextColor] = useState('#000000');
-  const [highlightColor, setHighlightColor] = useState('#ffff00');
+  const [highlightColor, setHighlightColor] = useState('#f5e6a8');
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [spellcheckOn, setSpellcheckOn] = useState(true);
@@ -220,7 +220,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
   };
 
   const handleResetHighlight = () => {
-    setHighlightColor('#ffff00');
+    setHighlightColor('#f5e6a8');
     const chain = editor.chain().focus();
     restoreSelection(chain);
     chain.unsetHighlight().run();

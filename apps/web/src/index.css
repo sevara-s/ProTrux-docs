@@ -67,7 +67,8 @@
     --ruler-fg: rgba(23, 25, 31, 0.5);
     --ruler-border: rgba(23, 25, 31, 0.1);
     --spine: var(--signal);
-    --selection: rgba(196, 137, 12, 0.22);
+    --selection: rgba(196, 137, 12, 0.28);
+    --selection-fg: #17191f;
     --chalk: rgba(23, 25, 31, 0.1);
     --fork: #c4890c;
   }
@@ -124,7 +125,8 @@
     --ruler-fg: rgba(243, 239, 230, 0.42);
     --ruler-border: rgba(243, 239, 230, 0.08);
     --spine: var(--signal);
-    --selection: rgba(232, 168, 74, 0.3);
+    --selection: rgba(232, 168, 74, 0.32);
+    --selection-fg: #17191f;
     --chalk: rgba(243, 239, 230, 0.35);
     --fork: #e8a84a;
   }
@@ -147,7 +149,12 @@
 
   ::selection {
     background: var(--selection);
-    color: var(--fg);
+    color: var(--selection-fg);
+  }
+
+  ::-moz-selection {
+    background: var(--selection);
+    color: var(--selection-fg);
   }
 }
 
@@ -479,12 +486,30 @@
 .editorial-paper {
   background: var(--paper);
   color: var(--paper-ink);
+  /* Keep native selection readable even when UI theme is dark */
+  color-scheme: light;
   border: 1px solid rgba(22, 24, 29, 0.08);
   box-shadow: var(--paper-shadow);
   border-radius: 0;
   position: relative;
   box-sizing: border-box;
   transition: box-shadow 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.editorial-paper ::selection,
+.editorial-paper *::selection,
+.ProseMirror ::selection,
+.ProseMirror *::selection {
+  background: var(--selection);
+  color: var(--selection-fg);
+}
+
+.editorial-paper ::-moz-selection,
+.editorial-paper *::-moz-selection,
+.ProseMirror ::-moz-selection,
+.ProseMirror *::-moz-selection {
+  background: var(--selection);
+  color: var(--selection-fg);
 }
 
 .editorial-paper--settle {
@@ -677,12 +702,10 @@ ul[data-type='taskList'] input[type='checkbox'] {
   border: 1px solid rgba(22, 24, 29, 0.12);
 }
 
-.ProseMirror hr {
-  border: none;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #c8890a, transparent);
-  opacity: 0.45;
-  margin: 2rem 0;
+.ProseMirror mark {
+  border-radius: 0.1em;
+  /* Keep ink readable on marker washes */
+  color: inherit;
 }
 
 .collaboration-cursor__caret {

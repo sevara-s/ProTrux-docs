@@ -207,6 +207,34 @@ export class CRDTManager {
     return this.isIdbSynced;
   }
 
+  /** True once the server room has synced (or we are intentionally offline). */
+  public get isServerSynced(): boolean {
+    return this.isWsSynced || this.isSimulatedOffline || !navigator.onLine;
+  }
+
+  /**
+   * Ready to inject template/welcome HTML into an empty Y.Doc.
+   * Must not run between IDB load and WS sync — setContent would wipe peers.
+   */
+  public get isReadyForSeed(): boolean {
+    return this.isIdbSynced && this.isServerSynced;
+  }
+
+  /** True when the shared TipTap fragment has no nodes. */
+  public isContentEmpty(): boolean {
+    return this.ydoc.getXmlFragment('default').length === 0;
+  }
+
+  /** Wait until seeding is safe (or timeout). Always re-check isContentEmpty() before setContent. */
+  public async waitUntilReadyForSeed(timeoutMs = 6000): Promise<boolean> {
+    const start = Date.now();
+    while (!this.destroyed && Date.now() - start < timeoutMs) {
+      if (this.isReadyForSeed) return true;
+      await new Promise((r) => setTimeout(r, 40));
+    }
+    return this.isIdbSynced && !this.destroyed;
+  }
+
   public simulateOffline(offline: boolean) {
     this.isSimulatedOffline = offline;
     writeSimulatedOfflineFlag(offline);

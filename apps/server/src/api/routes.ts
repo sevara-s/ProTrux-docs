@@ -1,14 +1,19 @@
 import { FastifyInstance } from 'fastify';
+import { createRequire } from 'node:module';
 import { normalizeDocId, type DocumentAccessMode } from '@protrux/shared';
 import { db } from '../db/database.js';
 import { docs, destroyRoom } from '../crdt/persistence.js';
-import * as Y from 'yjs';
 import {
   readOwnerKey,
   readShareToken,
   canOpenDocument,
   canEditDocument,
 } from '../access.js';
+
+const require = createRequire(import.meta.url);
+// Same CJS Yjs instance as y-websocket / persistence (avoid dual-package hazard)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const Y = require('yjs') as typeof import('yjs');
 
 const ACCESS_MODES: DocumentAccessMode[] = ['private', 'view', 'edit'];
 

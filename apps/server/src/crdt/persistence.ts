@@ -1,10 +1,22 @@
-import * as Y from 'yjs';
+/**
+ * Server CRDT persistence.
+ *
+ * IMPORTANT: y-websocket loads Yjs via CJS `require('yjs')`. Importing Yjs as
+ * ESM here creates a SECOND copy (Node dual-package hazard). Encoding/applying
+ * updates across copies silently drops data — text vanishes after refresh.
+ * Always use the CJS build below for anything touching WSSharedDoc.
+ */
+import { createRequire } from 'node:module';
 import { db } from '../db/database.js';
 import {
   setPersistence,
   docs,
   type WSSharedDoc,
 } from './y-websocket-utils.js';
+
+const require = createRequire(import.meta.url);
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const Y = require('yjs') as typeof import('yjs');
 
 interface PersistedDocMeta {
   updateCount: number;
@@ -15,11 +27,46 @@ interface PersistedDocMeta {
 
 const docMeta = new Map<string, PersistedDocMeta>();
 
+/**
+ * y-websocket calls `docs.delete(name)` IMMEDIATELY after invoking writeState,
+ * without awaiting it. Flush must complete synchronously before that returns.
+ */
+function flushDocToDb(docName: string, ydoc: WSSharedDoc): void {
+  if (!db.getDocument(docName)) return;
+
+  const fragment = ydoc.getXmlFragment('default');
+  const existingSnap = db.getSnapshot(docName);
+
+  if (fragment.length === 0 && existingSnap && existingSnap.byteLength > 8) {
+    console.warn(
+      `[CRDT Persistence] Skip empty overwrite for ${docName} (keeping ${existingSnap.byteLength}B snapshot)`
+    );
+    return;
+  }
+
+  const maxUpdateId = db.getMaxUpdateId(docName);
+  const snapshot = Y.encodeStateAsUpdate(ydoc);
+  db.saveSnapshotAndPruneUpdates(docName, snapshot, maxUpdateId);
+
+  try {
+    const text = fragment
+      .toString()
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .slice(0, 150)
+      .trim();
+    if (text) {
+      db.updateDocument(docName, { previewText: text });
+    }
+  } catch {
+    // ignore text extraction errors
+  }
+}
+
 export function initCRDTPersistence() {
   setPersistence({
     bindState: (docName: string, ydoc: WSSharedDoc) => {
       try {
-        // Rooms must be created via REST — do not auto-create on WS bind
         if (!db.getDocument(docName)) {
           console.warn(`[CRDT Persistence] Refusing bind for unknown doc: ${docName}`);
           return;
@@ -59,12 +106,12 @@ export function initCRDTPersistence() {
             }
 
             const gen = meta.generation;
-            if (meta.updateCount >= 50) {
-              void compactDoc(docName, ydoc, gen);
+            if (meta.updateCount >= 8) {
+              compactDoc(docName, gen);
             } else {
               meta.compactionTimeout = setTimeout(() => {
-                void compactDoc(docName, ydoc, gen);
-              }, 10000);
+                compactDoc(docName, gen);
+              }, 1500);
             }
           } catch (err) {
             console.error(`[CRDT Persistence] Error saving update for ${docName}:`, err);
@@ -81,61 +128,34 @@ export function initCRDTPersistence() {
         clearTimeout(meta.compactionTimeout);
         meta.compactionTimeout = undefined;
       }
-      const generation = meta?.generation ?? 0;
 
       try {
-        await compactDoc(docName, ydoc, generation);
+        flushDocToDb(docName, ydoc);
       } catch (err) {
         console.error(`[CRDT Persistence] Error during writeState for ${docName}:`, err);
       } finally {
-        const current = docMeta.get(docName);
-        if (current && current.generation === generation) {
-          if (current.compactionTimeout) clearTimeout(current.compactionTimeout);
-          docMeta.delete(docName);
-        }
+        docMeta.delete(docName);
       }
     },
   });
 }
 
-async function compactDoc(docName: string, ydoc: WSSharedDoc, generation?: number) {
+function compactDoc(docName: string, generation?: number) {
   const meta = docMeta.get(docName);
   if (!meta) return;
   if (generation !== undefined && meta.generation !== generation) return;
   if (meta.compacting) return;
-  if (!db.getDocument(docName)) return;
+
+  const liveDoc = docs.get(docName);
+  if (!liveDoc) return;
 
   meta.compacting = true;
-
   try {
-    const maxUpdateId = db.getMaxUpdateId(docName);
-    const snapshot = Y.encodeStateAsUpdate(ydoc);
-    db.saveSnapshotAndPruneUpdates(docName, snapshot, maxUpdateId);
-
-    const still = docMeta.get(docName);
-    if (!still || (generation !== undefined && still.generation !== generation)) {
-      return;
-    }
-
-    still.updateCount = 0;
-    if (still.compactionTimeout) {
-      clearTimeout(still.compactionTimeout);
-      still.compactionTimeout = undefined;
-    }
-
-    try {
-      const fragment = ydoc.getXmlFragment('default');
-      const text = fragment
-        .toString()
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .slice(0, 150)
-        .trim();
-      if (text && db.getDocument(docName)) {
-        db.updateDocument(docName, { previewText: text });
-      }
-    } catch {
-      // ignore text extraction errors
+    flushDocToDb(docName, liveDoc);
+    meta.updateCount = 0;
+    if (meta.compactionTimeout) {
+      clearTimeout(meta.compactionTimeout);
+      meta.compactionTimeout = undefined;
     }
   } catch (err) {
     console.error(`[CRDT Persistence] Compaction error for ${docName}:`, err);
@@ -145,7 +165,6 @@ async function compactDoc(docName: string, ydoc: WSSharedDoc, generation?: numbe
   }
 }
 
-/** Close all sockets, clear timers, and drop the in-memory room (used by DELETE). */
 export function destroyRoom(docName: string) {
   const meta = docMeta.get(docName);
   if (meta?.compactionTimeout) {
@@ -155,6 +174,12 @@ export function destroyRoom(docName: string) {
 
   const liveDoc = docs.get(docName);
   if (!liveDoc) return;
+
+  try {
+    flushDocToDb(docName, liveDoc);
+  } catch {
+    // best-effort
+  }
 
   try {
     if (liveDoc.conns && typeof liveDoc.conns.forEach === 'function') {
@@ -182,7 +207,6 @@ export function destroyRoom(docName: string) {
 
 type WebSocketLike = { close: (code?: number, reason?: string) => void };
 
-/** Flush every live room to SQLite (graceful shutdown). */
 export async function flushAllRooms() {
   const entries: Array<[string, WSSharedDoc]> = [];
   docs.forEach((ydoc, name) => entries.push([name, ydoc]));
@@ -194,7 +218,7 @@ export async function flushAllRooms() {
       meta.compactionTimeout = undefined;
     }
     try {
-      await compactDoc(name, ydoc, meta?.generation);
+      flushDocToDb(name, ydoc);
     } catch (err) {
       console.error(`[CRDT Persistence] Flush failed for ${name}:`, err);
     }
