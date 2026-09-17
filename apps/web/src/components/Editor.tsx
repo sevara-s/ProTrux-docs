@@ -16,9 +16,10 @@ import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import { CRDTManager } from '../services/crdt';
 import { DocsToolbar } from './DocsToolbar';
-import { FolioRail } from './DocsRuler';
+import { DocsRuler } from './DocsRuler';
 import { ModalProvider } from '@/providers/modal-provider';
 import { useDocumentStore } from '@/store/document-store';
+import { inchesToPx, usePageStore } from '@/store/page-store';
 import { DEFAULT_DOCUMENT_CONTENT } from '@protrux/shared';
 
 /** Inline font-size mark for the format dock. */
@@ -87,6 +88,20 @@ export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
   const setPendingContent = useDocumentStore((state) => state.setPendingContent);
   const canEdit = useDocumentStore((state) => state.canEdit);
 
+  const widthIn = usePageStore((s) => s.widthIn);
+  const heightIn = usePageStore((s) => s.heightIn);
+  const marginLeftIn = usePageStore((s) => s.marginLeftIn);
+  const marginRightIn = usePageStore((s) => s.marginRightIn);
+  const marginTopIn = usePageStore((s) => s.marginTopIn);
+  const marginBottomIn = usePageStore((s) => s.marginBottomIn);
+
+  const pageWidthPx = inchesToPx(widthIn);
+  const pageHeightPx = inchesToPx(heightIn);
+  const padLeft = inchesToPx(marginLeftIn);
+  const padRight = inchesToPx(marginRightIn);
+  const padTop = inchesToPx(marginTopIn);
+  const padBottom = inchesToPx(marginBottomIn);
+
   const editor = useEditor(
     {
       editable: canEdit,
@@ -139,7 +154,7 @@ export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
       ],
       editorProps: {
         attributes: {
-          class: 'editorial-content focus:outline-none min-h-[70vh] text-paper-ink',
+          class: 'editorial-content focus:outline-none text-paper-ink',
           spellcheck: 'true',
         },
         handleDrop: (view, event, slice, moved) => {
@@ -281,22 +296,40 @@ export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
   }, [editor, crdt, pendingContent]);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 ptx-desk relative select-text">
+    <div className="flex-1 flex flex-col min-h-0 relative select-text" style={{ background: 'var(--desk)' }}>
       {!canEdit && (
         <div className="shrink-0 px-4 py-2.5 border-b border-line bg-accent-soft text-center text-xs font-medium text-fg">
           View only — you can read this document, but editing is turned off.
         </div>
       )}
-      <DocsToolbar editor={editor} zoom={zoom} onZoomChange={setZoom} />
-      <FolioRail />
+      <div className="shrink-0 bg-elevated border-b border-line z-20">
+        <DocsToolbar editor={editor} zoom={zoom} onZoomChange={setZoom} />
+      </div>
+      <div className="shrink-0 z-10">
+        <DocsRuler />
+      </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-auto py-8 px-4 flex justify-center">
+      <div className="flex-1 overflow-y-auto overflow-x-auto py-8 px-4 flex justify-center min-h-0">
         <div
           ref={editorRef}
-          style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
-          className="transition-transform duration-200 ease-out mb-24 animate-rise-in w-full max-w-[42rem]"
+          style={{
+            transform: `scale(${zoom / 100})`,
+            transformOrigin: 'top center',
+            width: pageWidthPx,
+          }}
+          className="transition-transform duration-200 ease-out mb-24 animate-rise-in shrink-0"
         >
-          <div className="editorial-paper w-full min-h-[70vh] px-8 sm:px-12 py-10 sm:py-14 relative">
+          <div
+            className="editorial-paper relative"
+            style={{
+              width: pageWidthPx,
+              minHeight: pageHeightPx,
+              paddingLeft: padLeft,
+              paddingRight: padRight,
+              paddingTop: padTop,
+              paddingBottom: padBottom,
+            }}
+          >
             <EditorContent editor={editor} />
           </div>
         </div>

@@ -4,7 +4,15 @@ import { Editor } from '@tiptap/react';
 import { useModal, useModalStore } from '@/store/modal-store';
 import { useUserStore } from '@/store/user-store';
 import { useDocumentStore } from '@/store/document-store';
+import { usePageStore } from '@/store/page-store';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import {
+  exportDocx,
+  exportHtml,
+  exportMarkdown,
+  exportPdf,
+  exportPlainText,
+} from '@/services/export';
 
 export const DEMO_PERSONAS = [
   { name: 'Elena Rostova', color: '#164f42', role: 'Lead Author' },
@@ -48,6 +56,9 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
 
   const shareModal = useModal('share');
   const wordCountModal = useModal('word-count');
+  const pageSetupModal = useModal('page-setup');
+
+  const pageSetup = usePageStore();
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(title);
@@ -83,34 +94,50 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
     } else setTitleInput(title);
   };
 
-  const handleDownload = (format: 'md' | 'html' | 'txt' | 'print') => {
+  const handleDownload = async (
+    format: 'md' | 'html' | 'txt' | 'print' | 'pdf' | 'docx'
+  ) => {
     if (!editor) return;
     setActiveMenu(null);
     if (format === 'print') {
       window.print();
       return;
     }
-    let blob: Blob;
-    let extension: string;
-    if (format === 'md') {
-      blob = new Blob([`# ${title}\n\n${editor.getText()}`], { type: 'text/markdown;charset=utf-8' });
-      extension = 'md';
-    } else if (format === 'html') {
-      blob = new Blob(
-        [`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title></head><body>${editor.getHTML()}</body></html>`],
-        { type: 'text/html;charset=utf-8' }
-      );
-      extension = 'html';
-    } else {
-      blob = new Blob([editor.getText()], { type: 'text/plain;charset=utf-8' });
-      extension = 'txt';
+    if (format === 'pdf') {
+      exportPdf(editor, title, {
+        widthIn: pageSetup.widthIn,
+        heightIn: pageSetup.heightIn,
+        marginLeftIn: pageSetup.marginLeftIn,
+        marginRightIn: pageSetup.marginRightIn,
+        marginTopIn: pageSetup.marginTopIn,
+        marginBottomIn: pageSetup.marginBottomIn,
+        orientation: pageSetup.orientation,
+      });
+      return;
     }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${title || 'document'}.${extension}`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (format === 'docx') {
+      await exportDocx(editor, title, {
+        widthIn: pageSetup.widthIn,
+        heightIn: pageSetup.heightIn,
+        marginLeftIn: pageSetup.marginLeftIn,
+        marginRightIn: pageSetup.marginRightIn,
+        marginTopIn: pageSetup.marginTopIn,
+        marginBottomIn: pageSetup.marginBottomIn,
+        orientation: pageSetup.orientation,
+      });
+      return;
+    }
+    if (format === 'md') exportMarkdown(editor, title);
+    else if (format === 'html') {
+      exportHtml(editor, title, {
+        widthIn: pageSetup.widthIn,
+        heightIn: pageSetup.heightIn,
+        marginLeftIn: pageSetup.marginLeftIn,
+        marginRightIn: pageSetup.marginRightIn,
+        marginTopIn: pageSetup.marginTopIn,
+        marginBottomIn: pageSetup.marginBottomIn,
+      });
+    } else exportPlainText(editor, title);
   };
 
   const syncChip = () => {
@@ -232,15 +259,22 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
             </div>
 
             <div className="flex items-center gap-0.5 mt-1.5">
-              <Menu id="file" label="File" wide="w-60">
+              <Menu id="file" label="File" wide="w-64">
                 {item('New document', onNewDocument, '⌘N')}
                 {item('Home', onNavigateHome)}
                 {item('Open / Import', () => useModalStore.getState().openModal('open-file'), '⌘O')}
                 <div className="h-px bg-line my-1" />
-                {item('Export Markdown', () => handleDownload('md'))}
-                {item('Export HTML', () => handleDownload('html'))}
-                {item('Export plain text', () => handleDownload('txt'))}
-                {item('Print', () => handleDownload('print'), '⌘P')}
+                {item('Page setup…', () => pageSetupModal.openModal())}
+                <div className="h-px bg-line my-1" />
+                <p className="px-3.5 py-1 text-[10px] font-mono uppercase tracking-widest text-fg-muted">
+                  Download
+                </p>
+                {item('PDF document', () => void handleDownload('pdf'), '.pdf')}
+                {item('Microsoft Word', () => void handleDownload('docx'), '.docx')}
+                {item('Markdown', () => void handleDownload('md'), '.md')}
+                {item('Web page', () => void handleDownload('html'), '.html')}
+                {item('Plain text', () => void handleDownload('txt'), '.txt')}
+                {item('Print', () => void handleDownload('print'), '⌘P')}
                 <div className="h-px bg-line my-1" />
                 {item('Move to trash', onDeleteDocument, undefined, true)}
               </Menu>

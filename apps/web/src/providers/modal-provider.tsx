@@ -4,6 +4,7 @@ import { useDocumentStore } from '@/store/document-store';
 import { useUserStore } from '@/store/user-store';
 import { ShareModal } from '@/components/ShareModal';
 import { WordCountModal } from '@/components/WordCountModal';
+import { PageSetupModal } from '@/components/PageSetupModal';
 
 interface ModalProviderProps {
   stats: {
@@ -23,6 +24,7 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({
 }) => {
   const shareModal = useModal('share');
   const wordCountModal = useModal('word-count');
+  const pageSetupModal = useModal('page-setup');
 
   const currentDocTitle = useDocumentStore((state) => state.currentDocTitle);
   const currentDocId = useDocumentStore((state) => state.currentDocId);
@@ -50,6 +52,8 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({
         displayLive={displayLiveWordCount}
         onToggleDisplayLive={onToggleDisplayLiveWordCount}
       />
+
+      <PageSetupModal isOpen={pageSetupModal.isOpen} onClose={pageSetupModal.closeModal} />
     </>
   );
 };

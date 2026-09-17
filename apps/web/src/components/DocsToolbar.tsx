@@ -368,7 +368,7 @@ export const DocsToolbar: React.FC<DocsToolbarProps> = ({ editor, zoom, onZoomCh
           e.preventDefault();
         }
       }}
-      className="ptx-toolbar DocsToolbar mx-3 md:mx-auto max-w-5xl my-2.5 px-3 py-2 flex flex-wrap items-center gap-0.5 text-fg-soft text-xs select-none sticky top-[4.5rem] z-[60] overflow-visible rounded-xl transition-all relative"
+      className="ptx-toolbar DocsToolbar w-full shrink-0 px-3 py-2 flex flex-wrap items-center gap-0.5 text-fg-soft text-xs select-none z-20 overflow-visible rounded-none border-x-0 border-t-0 transition-all relative"
     >
       {/* Undo */}
       <button

@@ -116,11 +116,9 @@
   .ptx-desk {
     background-color: var(--desk);
     background-image:
-      radial-gradient(ellipse 90% 70% at 12% -8%, var(--mesh-a), transparent 55%),
-      radial-gradient(ellipse 70% 50% at 96% 0%, var(--mesh-b), transparent 48%),
       linear-gradient(var(--grid) 1px, transparent 1px),
       linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-    background-size: auto, auto, 32px 32px, 32px 32px;
+    background-size: 32px 32px, 32px 32px;
     transition: background-color 0.35s ease;
   }
 
@@ -168,8 +166,10 @@
   .ptx-chrome {
     background: var(--chrome);
     color: var(--chrome-fg);
-    border-bottom: 1px solid color-mix(in srgb, var(--live) 18%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--chrome-fg) 10%, transparent);
     backdrop-filter: blur(20px);
+    position: relative;
+    z-index: 40;
   }
 
   .ptx-panel {
@@ -193,10 +193,21 @@
   }
 
   .ptx-toolbar {
-    background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
-    backdrop-filter: blur(18px) saturate(1.15);
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border);
+    box-shadow: none;
+  }
+
+  .ptx-menu {
+    background: var(--bg-elevated);
     border: 1px solid var(--border);
-    box-shadow: var(--shadow-soft);
+    box-shadow: var(--shadow-lift);
+    border-radius: 0.875rem;
+    padding: 0.4rem 0;
+    z-index: 200;
+    font-size: 0.75rem;
+    animation: fade-scale 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    color: var(--fg);
   }
 
   .ptx-btn {
@@ -245,18 +256,6 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     border: 1px solid var(--border);
-  }
-
-  .ptx-menu {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow-lift);
-    border-radius: 0.875rem;
-    padding: 0.4rem 0;
-    z-index: 50;
-    font-size: 0.75rem;
-    animation: fade-scale 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-    color: var(--fg);
   }
 
   .ptx-menu-item {
@@ -372,27 +371,45 @@
   }
 }
 
-/* Writing surface — continuous folio column (not letter-page clone) */
+/* Writing surface — print-like page (width/height from page setup) */
 .editorial-paper {
   background: var(--paper);
   color: var(--paper-ink);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-lift);
-  border-radius: 1rem;
+  border-radius: 0;
   position: relative;
+  box-sizing: border-box;
   transition: background-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease;
 }
 
-.editorial-paper::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 1.25rem;
-  bottom: 1.25rem;
-  width: 3px;
-  background: var(--spine);
-  opacity: 0.95;
-  border-radius: 999px;
+/* Docs-style ruler */
+.ptx-ruler {
+  background: color-mix(in srgb, var(--bg-muted) 88%, var(--bg-elevated));
+}
+
+.ptx-ruler-handle {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.ptx-ruler-handle__cap {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid var(--fg-muted);
+  margin-top: 1px;
+}
+
+.ptx-ruler-handle:hover .ptx-ruler-handle__cap,
+.ptx-ruler-handle:focus-visible .ptx-ruler-handle__cap {
+  border-top-color: var(--accent);
 }
 
 .ProseMirror {
@@ -591,20 +608,34 @@ ul[data-type='taskList'] input[type='checkbox'] {
 @media print {
   body {
     background: white !important;
-    color: black !important;
+    color: #13201c !important;
   }
   header,
   .ptx-toolbar,
   .ptx-ruler,
   .ptx-offline,
-  .theme-toggle {
+  .theme-toggle,
+  .DocsToolbar {
     display: none !important;
+  }
+  .ptx-desk,
+  .flex.h-screen {
+    background: white !important;
+    background-image: none !important;
+    overflow: visible !important;
+    height: auto !important;
   }
   .editorial-paper {
     box-shadow: none !important;
     border: none !important;
+    margin: 0 auto !important;
   }
-  .editorial-paper::before {
-    display: none;
+  .ProseMirror h2,
+  .ProseMirror h4 {
+    color: #1f6f5c !important;
+  }
+  .collaboration-cursor__caret,
+  .collaboration-cursor__label {
+    display: none !important;
   }
 }

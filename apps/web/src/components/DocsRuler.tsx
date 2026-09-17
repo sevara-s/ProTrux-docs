@@ -1,64 +1,146 @@
-import React from 'react';
-import { useUserStore } from '@/store/user-store';
+import React, { useCallback, useRef, useState } from 'react';
+import { INCH, inchesToPx, usePageStore } from '@/store/page-store';
 
 /**
- * Helix presence rail — collaborator color spectrum + folio width cue.
- * Editorial measure strip tied to live awareness, not a print ruler.
+ * Google Docs–style horizontal ruler locked to the page width,
+ * with draggable left / right margin guides.
  */
-const FOREST_TONES = ['#1f6f5c', '#164f42', '#3d8f7a', '#5aab94', '#2d8570', '#4a9e88'];
+export const DocsRuler: React.FC = () => {
+  const widthIn = usePageStore((s) => s.widthIn);
+  const marginLeftIn = usePageStore((s) => s.marginLeftIn);
+  const marginRightIn = usePageStore((s) => s.marginRightIn);
+  const setMargins = usePageStore((s) => s.setMargins);
 
-function toneFor(color: string, index: number) {
-  // Keep brand-aligned forest tones even if an old rainbow profile is in localStorage
-  const hex = (color || '').toLowerCase();
-  if (/^#1f6f5c|^#164f42|^#3d8f7a|^#5aab94|^#13201c|^#2d8570|^#4a9e88/.test(hex)) {
-    return color;
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState<'left' | 'right' | null>(null);
+
+  const widthPx = inchesToPx(widthIn);
+  const leftPx = inchesToPx(marginLeftIn);
+  const rightPx = inchesToPx(marginRightIn);
+  const contentWidthPx = Math.max(0, widthPx - leftPx - rightPx);
+
+  const ticks = [];
+  const majorEvery = 1;
+  const minorEvery = 0.125;
+  for (let inch = 0; inch <= widthIn + 0.001; inch = Math.round((inch + minorEvery) * 1000) / 1000) {
+    const isMajor = Math.abs(inch % majorEvery) < 0.001 || Math.abs(inch % majorEvery - majorEvery) < 0.001;
+    const isHalf = !isMajor && Math.abs((inch * 2) % 1) < 0.001;
+    ticks.push({
+      inch,
+      left: inchesToPx(inch),
+      kind: isMajor ? 'major' : isHalf ? 'half' : 'minor',
+    });
   }
-  return FOREST_TONES[index % FOREST_TONES.length];
-}
 
-export const FolioRail: React.FC = () => {
-  const collaborators = useUserStore((s) => s.collaborators);
-  const currentUser = useUserStore((s) => s.currentUser);
-  const syncStatus = useUserStore((s) => s.syncStatus);
+  const onPointerMove = useCallback(
+    (clientX: number, edge: 'left' | 'right') => {
+      const track = trackRef.current;
+      if (!track) return;
+      const rect = track.getBoundingClientRect();
+      const xIn = (clientX - rect.left) / INCH;
 
-  const colors = [
-    toneFor(currentUser.color, 0),
-    ...collaborators.map((c, i) => toneFor(c.color, i + 1)),
-  ].slice(0, 8);
+      if (edge === 'left') {
+        setMargins({ left: xIn });
+      } else {
+        setMargins({ right: widthIn - xIn });
+      }
+    },
+    [setMargins, widthIn]
+  );
 
-  const statusLabel =
-    syncStatus === 'offline'
-      ? 'Offline'
-      : syncStatus === 'synced'
-        ? 'Connected'
-        : syncStatus === 'syncing'
-          ? 'Syncing'
-          : 'Connecting';
+  const startDrag = (edge: 'left' | 'right') => (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(edge);
+    const target = e.currentTarget;
+    target.setPointerCapture(e.pointerId);
+
+    const onMove = (ev: PointerEvent) => onPointerMove(ev.clientX, edge);
+    const onUp = () => {
+      setDragging(null);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
 
   return (
-    <div className="w-full flex justify-center select-none py-2 px-4">
-      <div className="w-full max-w-[42rem] flex flex-col gap-1.5">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-fg-muted">
-            {statusLabel}
-          </span>
-          <span className="text-[10px] font-mono text-fg-muted tabular-nums">
-            {1 + collaborators.length} author{collaborators.length === 0 ? '' : 's'}
-          </span>
-        </div>
-        <div className="h-1.5 rounded-full overflow-hidden bg-elevated/80 border border-line flex shadow-soft">
-          {colors.map((color, i) => (
+    <div className="ptx-ruler shrink-0 select-none border-b border-line bg-muted/80">
+      <div className="w-full flex justify-center px-4 py-0">
+        <div
+          ref={trackRef}
+          className="relative h-5 bg-elevated"
+          style={{ width: widthPx }}
+        >
+          {/* Non-writable (margin) regions */}
+          <div
+            className="absolute inset-y-0 left-0 bg-muted/90 pointer-events-none"
+            style={{ width: leftPx }}
+          />
+          <div
+            className="absolute inset-y-0 right-0 bg-muted/90 pointer-events-none"
+            style={{ width: rightPx }}
+          />
+
+          {/* Writable band */}
+          <div
+            className="absolute inset-y-0 bg-elevated pointer-events-none"
+            style={{ left: leftPx, width: contentWidthPx }}
+          />
+
+          {/* Tick marks */}
+          {ticks.map((t) => (
             <div
-              key={`${color}-${i}`}
-              className="h-full flex-1 first:rounded-l-full last:rounded-r-full transition-all duration-500"
-              style={{ backgroundColor: color, opacity: 0.85 + (i === 0 ? 0.15 : 0) }}
-            />
+              key={t.inch}
+              className="absolute bottom-0 flex flex-col items-center pointer-events-none"
+              style={{ left: t.left, transform: 'translateX(-50%)' }}
+            >
+              {t.kind === 'major' && t.inch > 0 && t.inch < widthIn && (
+                <span className="text-[9px] leading-none text-fg-muted mb-0.5 tabular-nums">
+                  {Math.round(t.inch)}
+                </span>
+              )}
+              <span
+                className={`w-px bg-fg-muted/70 ${
+                  t.kind === 'major' ? 'h-2.5' : t.kind === 'half' ? 'h-2' : 'h-1'
+                }`}
+              />
+            </div>
           ))}
+
+          {/* Left margin handle */}
+          <button
+            type="button"
+            aria-label="Left margin"
+            title={`Left margin ${marginLeftIn.toFixed(2)}"`}
+            onPointerDown={startDrag('left')}
+            className={`ptx-ruler-handle absolute top-0 bottom-0 z-10 w-2 -ml-1 cursor-ew-resize ${
+              dragging === 'left' ? 'opacity-100' : ''
+            }`}
+            style={{ left: leftPx }}
+          >
+            <span className="ptx-ruler-handle__cap" />
+          </button>
+
+          {/* Right margin handle */}
+          <button
+            type="button"
+            aria-label="Right margin"
+            title={`Right margin ${marginRightIn.toFixed(2)}"`}
+            onPointerDown={startDrag('right')}
+            className={`ptx-ruler-handle absolute top-0 bottom-0 z-10 w-2 -ml-1 cursor-ew-resize ${
+              dragging === 'right' ? 'opacity-100' : ''
+            }`}
+            style={{ left: widthPx - rightPx }}
+          >
+            <span className="ptx-ruler-handle__cap" />
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-/** @deprecated Use FolioRail — kept as alias during rename. */
-export const DocsRuler = FolioRail;
+/** @deprecated Alias kept for older imports. */
+export const FolioRail = DocsRuler;

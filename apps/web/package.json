@@ -28,6 +28,7 @@
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
     "clsx": "^2.1.1",
+    "docx": "^9.7.1",
     "lucide-react": "^0.477.0",
     "mammoth": "^1.12.3",
     "react": "^18.3.1",
