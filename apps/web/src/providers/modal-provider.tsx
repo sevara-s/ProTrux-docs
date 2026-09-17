@@ -25,6 +25,7 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({
   const wordCountModal = useModal('word-count');
 
   const currentDocTitle = useDocumentStore((state) => state.currentDocTitle);
+  const currentDocId = useDocumentStore((state) => state.currentDocId);
   const currentUser = useUserStore((state) => state.currentUser);
   const collaborators = useUserStore((state) => state.collaborators);
 
@@ -34,6 +35,7 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({
         isOpen={shareModal.isOpen}
         onClose={shareModal.closeModal}
         documentTitle={currentDocTitle}
+        documentId={currentDocId}
         collaborators={collaborators}
         currentUser={currentUser}
       />

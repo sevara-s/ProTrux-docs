@@ -1,33 +1,60 @@
-import { DocumentMetadata } from '@protrux/shared';
+import { DocumentAccessMode, DocumentMetadata } from '@protrux/shared';
+import { getOwnerKey, ownerHeaders } from '@/services/owner-key';
 
 const API_BASE = '/api';
 
+export type DocumentAccessInfo = DocumentMetadata & {
+  canEdit?: boolean;
+};
+
 export async function getDocuments(): Promise<DocumentMetadata[]> {
-  const res = await fetch(`${API_BASE}/documents`);
+  const res = await fetch(`${API_BASE}/documents?ownerKey=${encodeURIComponent(getOwnerKey())}`, {
+    headers: ownerHeaders(),
+  });
   if (!res.ok) throw new Error('Failed to fetch documents');
   return res.json();
 }
 
-export async function getDocument(id: string): Promise<DocumentMetadata> {
-  const res = await fetch(`${API_BASE}/documents/${encodeURIComponent(id)}`);
+export async function getDocument(
+  id: string,
+  shareToken?: string | null
+): Promise<DocumentAccessInfo> {
+  const params = new URLSearchParams({ ownerKey: getOwnerKey() });
+  if (shareToken) params.set('k', shareToken);
+  const res = await fetch(`${API_BASE}/documents/${encodeURIComponent(id)}?${params}`, {
+    headers: ownerHeaders(),
+  });
+  if (res.status === 403) {
+    const body = await res.json().catch(() => ({}));
+    const err = new Error((body as { error?: string }).error || 'This document is private');
+    (err as Error & { code?: string }).code = 'private';
+    throw err;
+  }
   if (!res.ok) throw new Error(`Failed to fetch document ${id}`);
   return res.json();
 }
 
-export async function createDocument(title?: string, id?: string): Promise<DocumentMetadata> {
+export async function createDocument(
+  title?: string,
+  id?: string,
+  accessMode: DocumentAccessMode = 'edit'
+): Promise<DocumentMetadata> {
   const res = await fetch(`${API_BASE}/documents`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, id }),
+    headers: { 'Content-Type': 'application/json', ...ownerHeaders() },
+    body: JSON.stringify({ title, id, accessMode }),
   });
   if (!res.ok) throw new Error('Failed to create document');
   return res.json();
 }
 
-export async function updateDocument(id: string, data: { title?: string; previewText?: string }): Promise<DocumentMetadata> {
+export async function updateDocument(
+  id: string,
+  data: { title?: string; previewText?: string; accessMode?: DocumentAccessMode }
+): Promise<DocumentAccessInfo> {
   const res = await fetch(`${API_BASE}/documents/${encodeURIComponent(id)}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...ownerHeaders() },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error(`Failed to update document ${id}`);
@@ -37,6 +64,7 @@ export async function updateDocument(id: string, data: { title?: string; preview
 export async function deleteDocument(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/documents/${encodeURIComponent(id)}`, {
     method: 'DELETE',
+    headers: ownerHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to delete document ${id}`);
 }

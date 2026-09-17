@@ -36,6 +36,8 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
   const title = useDocumentStore((s) => s.currentDocTitle);
   const currentDocId = useDocumentStore((s) => s.currentDocId);
   const updateDocTitle = useDocumentStore((s) => s.updateDocTitle);
+  const canEdit = useDocumentStore((s) => s.canEdit);
+  const accessMode = useDocumentStore((s) => s.accessMode);
 
   const currentUser = useUserStore((s) => s.currentUser);
   const setCurrentUser = useUserStore((s) => s.setCurrentUser);
@@ -206,13 +208,27 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
               ) : (
                 <button
                   type="button"
-                  onClick={() => setIsEditingTitle(true)}
-                  className="ptx-mark text-base text-chrome-fg hover:text-accent truncate max-w-[220px] md:max-w-md text-left"
+                  onClick={() => {
+                    if (canEdit) setIsEditingTitle(true);
+                  }}
+                  className={`ptx-mark text-base text-chrome-fg truncate max-w-[220px] md:max-w-md text-left ${
+                    canEdit ? 'hover:text-accent' : 'cursor-default'
+                  }`}
                 >
                   {title || 'Untitled document'}
                 </button>
               )}
               {syncChip()}
+              {!canEdit && (
+                <span className="text-[10px] font-mono uppercase tracking-wide text-accent/90 px-2 py-0.5 rounded-md bg-accent/15 border border-accent/25">
+                  View only
+                </span>
+              )}
+              {canEdit && accessMode === 'private' && (
+                <span className="text-[10px] font-mono uppercase tracking-wide text-chrome-muted px-2 py-0.5 rounded-md bg-white/5 border border-white/10">
+                  Private
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-0.5 mt-1.5">

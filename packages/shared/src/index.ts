@@ -5,7 +5,39 @@ export interface DocumentMetadata {
   updatedAt: number;
   previewText?: string;
   activeUsersCount?: number;
+  /** private = owner only; view = link can read; edit = link can write */
+  accessMode?: DocumentAccessMode;
+  /** Present for the owner only — used when building share links. */
+  shareToken?: string;
+  /** True when the requesting client owns this document. */
+  isOwner?: boolean;
 }
+
+/** Who can open / change the document via the share link. */
+export type DocumentAccessMode = 'private' | 'view' | 'edit';
+
+export const DOCUMENT_ACCESS_OPTIONS: {
+  id: DocumentAccessMode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: 'private',
+    label: 'Private',
+    description: 'Only you can open this document from your library.',
+  },
+  {
+    id: 'view',
+    label: 'Anyone with the link can view',
+    description: 'Peers can open and read, but cannot edit.',
+  },
+  {
+    id: 'edit',
+    label: 'Anyone with the link can edit',
+    description: 'Peers can open and edit together in real time.',
+  },
+];
+
 
 export interface UserPresence {
   id: string;

@@ -85,9 +85,11 @@ export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
   const seededRef = useRef(false);
   const pendingContent = useDocumentStore((state) => state.pendingContent);
   const setPendingContent = useDocumentStore((state) => state.setPendingContent);
+  const canEdit = useDocumentStore((state) => state.canEdit);
 
   const editor = useEditor(
     {
+      editable: canEdit,
       extensions: [
         StarterKit.configure({
           history: false,
@@ -213,6 +215,11 @@ export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
   }, [editor, crdt.user.name, crdt.user.color]);
 
   useEffect(() => {
+    if (!editor) return;
+    editor.setEditable(canEdit);
+  }, [editor, canEdit]);
+
+  useEffect(() => {
     if (editor && onEditorReady) {
       queueMicrotask(() => {
         onEditorReady(editor);
@@ -275,6 +282,11 @@ export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 ptx-desk relative select-text">
+      {!canEdit && (
+        <div className="shrink-0 px-4 py-2.5 border-b border-line bg-accent-soft text-center text-xs font-medium text-fg">
+          View only — you can read this document, but editing is turned off.
+        </div>
+      )}
       <DocsToolbar editor={editor} zoom={zoom} onZoomChange={setZoom} />
       <FolioRail />
 

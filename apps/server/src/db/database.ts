@@ -1,7 +1,43 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
-import type { DocumentMetadata } from '@protrux/shared';
+import { randomBytes } from 'node:crypto';
+import type { DocumentAccessMode, DocumentMetadata } from '@protrux/shared';
+
+type DocumentRow = {
+  id: string;
+  title: string;
+  previewText?: string;
+  createdAt: number | bigint;
+  updatedAt: number | bigint;
+  accessMode?: string;
+  shareToken?: string | null;
+  ownerKey?: string | null;
+};
+
+function newShareToken(): string {
+  return randomBytes(12).toString('base64url');
+}
+
+function mapRow(row: DocumentRow): DocumentMetadata & { ownerKey?: string } {
+  const accessMode = (row.accessMode as DocumentAccessMode) || 'edit';
+  return {
+    id: row.id,
+    title: row.title,
+    previewText: row.previewText || '',
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
+    accessMode,
+    shareToken: row.shareToken || undefined,
+    ownerKey: row.ownerKey || undefined,
+  };
+}
+
+const DOC_SELECT = `
+  SELECT id, title, preview_text as previewText, created_at as createdAt, updated_at as updatedAt,
+         access_mode as accessMode, share_token as shareToken, owner_key as ownerKey
+  FROM documents
+`;
 
 export class Database {
   private db: DatabaseSync;
@@ -34,7 +70,6 @@ export class Database {
       );
     `);
 
-    // Document snapshots table (compacted binary CRDT state)
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS document_snapshots (
         document_id TEXT PRIMARY KEY,
@@ -59,6 +94,23 @@ export class Database {
       ON document_updates(document_id);
     `);
 
+    // Access control columns (safe to re-run)
+    try {
+      this.db.exec(`ALTER TABLE documents ADD COLUMN access_mode TEXT NOT NULL DEFAULT 'edit'`);
+    } catch {
+      /* already exists */
+    }
+    try {
+      this.db.exec(`ALTER TABLE documents ADD COLUMN share_token TEXT`);
+    } catch {
+      /* already exists */
+    }
+    try {
+      this.db.exec(`ALTER TABLE documents ADD COLUMN owner_key TEXT`);
+    } catch {
+      /* already exists */
+    }
+
     this.seedDefaultDocumentIfEmpty();
   }
 
@@ -68,82 +120,120 @@ export class Database {
       const defaultId = 'welcome-doc';
       const now = Date.now();
       const insert = this.db.prepare(`
-        INSERT INTO documents (id, title, preview_text, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO documents (id, title, preview_text, created_at, updated_at, access_mode, share_token, owner_key)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
       insert.run(
         defaultId,
         'Welcome to ProTrux Collaborative Docs',
         'An authorial, local-first collaborative document engine with CRDT offline sync.',
         now,
-        now
+        now,
+        'edit',
+        newShareToken(),
+        null
       );
     }
   }
 
-  public listDocuments(): DocumentMetadata[] {
-    const stmt = this.db.prepare(`
-      SELECT id, title, preview_text as previewText, created_at as createdAt, updated_at as updatedAt
-      FROM documents
-      ORDER BY updated_at DESC
-    `);
-    const rows = stmt.all() as any[];
-    return rows.map((r) => ({
-      id: r.id,
-      title: r.title,
-      previewText: r.previewText,
-      createdAt: Number(r.createdAt),
-      updatedAt: Number(r.updatedAt),
-    }));
+  public listDocuments(viewerOwnerKey?: string): DocumentMetadata[] {
+    const stmt = this.db.prepare(`${DOC_SELECT} ORDER BY updated_at DESC`);
+    const rows = stmt.all() as DocumentRow[];
+    return rows
+      .map(mapRow)
+      .filter((doc) => {
+        if (doc.accessMode !== 'private') return true;
+        return !!viewerOwnerKey && doc.ownerKey === viewerOwnerKey;
+      })
+      .map((doc) => this.toPublic(doc, viewerOwnerKey));
   }
 
-  public getDocument(id: string): DocumentMetadata | null {
-    const stmt = this.db.prepare(`
-      SELECT id, title, preview_text as previewText, created_at as createdAt, updated_at as updatedAt
-      FROM documents
-      WHERE id = ?
-    `);
-    const row = stmt.get(id) as any;
+  public getDocument(id: string): (DocumentMetadata & { ownerKey?: string }) | null {
+    const stmt = this.db.prepare(`${DOC_SELECT} WHERE id = ?`);
+    const row = stmt.get(id) as DocumentRow | undefined;
     if (!row) return null;
+    return mapRow(row);
+  }
+
+  /** Public-facing metadata — never leaks ownerKey; shareToken only for owner. */
+  public toPublic(
+    doc: DocumentMetadata & { ownerKey?: string },
+    viewerOwnerKey?: string
+  ): DocumentMetadata {
+    const isOwner = !!(viewerOwnerKey && doc.ownerKey && viewerOwnerKey === doc.ownerKey);
     return {
-      id: row.id,
-      title: row.title,
-      previewText: row.previewText,
-      createdAt: Number(row.createdAt),
-      updatedAt: Number(row.updatedAt),
+      id: doc.id,
+      title: doc.title,
+      previewText: doc.previewText,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+      accessMode: doc.accessMode || 'edit',
+      shareToken: isOwner ? doc.shareToken : undefined,
+      isOwner,
     };
   }
 
-  public createDocument(id: string, title: string, previewText?: string): DocumentMetadata {
+  public createDocument(
+    id: string,
+    title: string,
+    previewText?: string,
+    opts?: { ownerKey?: string; accessMode?: DocumentAccessMode }
+  ): DocumentMetadata {
     const now = Date.now();
+    const accessMode = opts?.accessMode || 'edit';
+    const shareToken = newShareToken();
+    const ownerKey = opts?.ownerKey || null;
+
     const stmt = this.db.prepare(`
-      INSERT INTO documents (id, title, preview_text, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO documents (id, title, preview_text, created_at, updated_at, access_mode, share_token, owner_key)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(id, title, previewText || '', now, now);
-    return {
-      id,
-      title,
-      previewText: previewText || '',
-      createdAt: now,
-      updatedAt: now,
-    };
+    stmt.run(id, title, previewText || '', now, now, accessMode, shareToken, ownerKey);
+
+    return this.toPublic(
+      {
+        id,
+        title,
+        previewText: previewText || '',
+        createdAt: now,
+        updatedAt: now,
+        accessMode,
+        shareToken,
+        ownerKey: ownerKey || undefined,
+      },
+      ownerKey || undefined
+    );
   }
 
-  public updateDocument(id: string, data: { title?: string; previewText?: string }): boolean {
+  /** Assign owner when the document has none (legacy / welcome seed). */
+  public claimOwnerIfEmpty(id: string, ownerKey: string): boolean {
+    const doc = this.getDocument(id);
+    if (!doc || doc.ownerKey) return false;
+    const stmt = this.db.prepare(`
+      UPDATE documents SET owner_key = ? WHERE id = ? AND (owner_key IS NULL OR owner_key = '')
+    `);
+    stmt.run(ownerKey, id);
+    return true;
+  }
+
+  public updateDocument(
+    id: string,
+    data: { title?: string; previewText?: string; accessMode?: DocumentAccessMode }
+  ): boolean {
     const doc = this.getDocument(id);
     if (!doc) return false;
 
     const newTitle = data.title !== undefined ? data.title : doc.title;
     const newPreview = data.previewText !== undefined ? data.previewText : doc.previewText;
+    const newAccess = data.accessMode !== undefined ? data.accessMode : doc.accessMode || 'edit';
     const now = Date.now();
 
     const stmt = this.db.prepare(`
       UPDATE documents
-      SET title = ?, preview_text = ?, updated_at = ?
+      SET title = ?, preview_text = ?, access_mode = ?, updated_at = ?
       WHERE id = ?
     `);
-    stmt.run(newTitle, newPreview || '', now, id);
+    stmt.run(newTitle, newPreview || '', newAccess, now, id);
     return true;
   }
 
@@ -160,7 +250,6 @@ export class Database {
     const deleteAll = this.db.prepare(`
       DELETE FROM documents WHERE id = ?
     `);
-    // Cascades remove snapshots/updates when foreign_keys=ON; also delete explicitly for safety.
     this.db.exec('BEGIN');
     try {
       this.db.prepare('DELETE FROM document_updates WHERE document_id = ?').run(id);
@@ -175,8 +264,6 @@ export class Database {
   }
 
   public saveUpdate(documentId: string, updateData: Uint8Array) {
-    // Never auto-create here — deleted docs must stay deleted.
-    // Room bindState is responsible for creating metadata on first open.
     const existing = this.getDocument(documentId);
     if (!existing) {
       throw new Error(`Cannot persist update for unknown document: ${documentId}`);
@@ -214,29 +301,20 @@ export class Database {
     return new Uint8Array(row.snapshotData);
   }
 
-  /** Highest update row id currently persisted for a document (0 if none). */
   public getMaxUpdateId(documentId: string): number {
     const row = this.db
-      .prepare(
-        `SELECT COALESCE(MAX(id), 0) as maxId FROM document_updates WHERE document_id = ?`
-      )
+      .prepare(`SELECT COALESCE(MAX(id), 0) as maxId FROM document_updates WHERE document_id = ?`)
       .get(documentId) as { maxId: number | bigint } | undefined;
     return Number(row?.maxId ?? 0);
   }
 
-  /**
-   * Atomically store a compacted snapshot and prune only updates that existed
-   * at watermark time. Newer updates (id > maxUpdateId) are preserved so
-   * concurrent writes during compaction cannot be lost.
-   */
   public saveSnapshotAndPruneUpdates(
     documentId: string,
     snapshotData: Uint8Array,
     maxUpdateId?: number
   ) {
     const now = Date.now();
-    const watermark =
-      maxUpdateId === undefined ? this.getMaxUpdateId(documentId) : maxUpdateId;
+    const watermark = maxUpdateId === undefined ? this.getMaxUpdateId(documentId) : maxUpdateId;
 
     this.db.exec('BEGIN IMMEDIATE');
     try {
@@ -251,9 +329,7 @@ export class Database {
 
       if (watermark > 0) {
         this.db
-          .prepare(
-            `DELETE FROM document_updates WHERE document_id = ? AND id <= ?`
-          )
+          .prepare(`DELETE FROM document_updates WHERE document_id = ? AND id <= ?`)
           .run(documentId, watermark);
       }
 

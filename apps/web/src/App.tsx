@@ -13,13 +13,18 @@ import { AppDialog } from '@/components/AppDialog';
 import { PresenceToasts } from '@/components/PresenceToasts';
 import { JoinIdentityModal } from '@/components/JoinIdentityModal';
 import { confirmDialog } from '@/store/dialog-store';
-import { DocumentTemplate } from '@protrux/shared';
+import { getDocument } from '@/services/api';
+import { DocumentAccessMode, DocumentTemplate } from '@protrux/shared';
+import { Lock, Hexagon } from 'lucide-react';
 
-function readDocFromHash(): string | null {
+function readHashParams(): { doc: string | null; shareToken: string | null } {
   const hash = window.location.hash.replace(/^#/, '');
-  if (!hash) return null;
+  if (!hash) return { doc: null, shareToken: null };
   const params = new URLSearchParams(hash);
-  return params.get('doc');
+  return {
+    doc: params.get('doc'),
+    shareToken: params.get('k'),
+  };
 }
 
 export const App: React.FC = () => {
@@ -31,6 +36,9 @@ export const App: React.FC = () => {
   const setCurrentDocId = useDocumentStore((state) => state.setCurrentDocId);
   const setCurrentDocTitle = useDocumentStore((state) => state.setCurrentDocTitle);
   const setPendingContent = useDocumentStore((state) => state.setPendingContent);
+  const setAccessState = useDocumentStore((state) => state.setAccessState);
+  const accessDenied = useDocumentStore((state) => state.accessDenied);
+  const canEdit = useDocumentStore((state) => state.canEdit);
 
   const currentUser = useUserStore((state) => state.currentUser);
   const setCurrentUser = useUserStore((state) => state.setCurrentUser);
@@ -41,21 +49,22 @@ export const App: React.FC = () => {
   const toggleSimulatedOffline = useUserStore((state) => state.toggleSimulatedOffline);
 
   const [editorInstance, setEditorInstance] = useState<any>(null);
+  const [accessLoading, setAccessLoading] = useState(false);
   const didInitHash = useRef(false);
+  const shareTokenRef = useRef<string | null>(null);
 
-  const crdtManager = useCRDT(view === 'editor' ? currentDocId : '');
+  const crdtManager = useCRDT(view === 'editor' && !accessDenied ? currentDocId : '');
 
-  // Refresh document list whenever we land on the dashboard
   useEffect(() => {
     if (view === 'dashboard') {
       void refetch();
     }
   }, [view, refetch]);
 
-  // Apply deep-link on first load + listen for hash changes
   useEffect(() => {
     const applyHash = () => {
-      const doc = readDocFromHash();
+      const { doc, shareToken } = readHashParams();
+      shareTokenRef.current = shareToken;
       if (doc) {
         setCurrentDocId(doc);
         const meta = useDocumentStore.getState().documents.find((d) => d.id === doc);
@@ -63,6 +72,7 @@ export const App: React.FC = () => {
         setView('editor');
       } else if (didInitHash.current) {
         setView('dashboard');
+        setAccessState({ accessDenied: false, canEdit: true, accessMode: 'edit' });
       }
     };
 
@@ -71,9 +81,61 @@ export const App: React.FC = () => {
 
     window.addEventListener('hashchange', applyHash);
     return () => window.removeEventListener('hashchange', applyHash);
-  }, [setCurrentDocId, setCurrentDocTitle, setView]);
+  }, [setCurrentDocId, setCurrentDocTitle, setView, setAccessState]);
 
-  // Keep title in sync when documents list loads for a deep-linked doc
+  // Resolve access whenever we enter the editor for a document
+  useEffect(() => {
+    if (view !== 'editor' || !currentDocId) return;
+
+    let cancelled = false;
+    setAccessLoading(true);
+    setAccessState({ accessDenied: false });
+
+    void (async () => {
+      try {
+        const meta = await getDocument(currentDocId, shareTokenRef.current);
+        if (cancelled) return;
+        setCurrentDocTitle(meta.title);
+        const mode = (meta.accessMode || 'edit') as DocumentAccessMode;
+        setAccessState({
+          accessMode: mode,
+          canEdit: meta.canEdit ?? (Boolean(meta.isOwner) || mode === 'edit'),
+          isOwner: !!meta.isOwner,
+          shareToken: meta.shareToken ?? null,
+          accessDenied: false,
+        });
+      } catch (err: any) {
+        if (cancelled) return;
+        if (err?.code === 'private') {
+          setAccessState({
+            accessDenied: true,
+            canEdit: false,
+            accessMode: 'private',
+            isOwner: false,
+          });
+        } else {
+          // Offline / missing API — allow local edit so drafts still work
+          const local = useDocumentStore.getState().documents.find((d) => d.id === currentDocId);
+          const mode = (local?.accessMode || 'edit') as DocumentAccessMode;
+          setAccessState({
+            accessDenied: false,
+            canEdit: local?.isOwner || mode === 'edit',
+            accessMode: mode,
+            isOwner: !!local?.isOwner,
+            shareToken: local?.shareToken ?? null,
+          });
+          if (local) setCurrentDocTitle(local.title);
+        }
+      } finally {
+        if (!cancelled) setAccessLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [view, currentDocId, setAccessState, setCurrentDocTitle]);
+
   useEffect(() => {
     if (view !== 'editor') return;
     const meta = documents.find((d) => d.id === currentDocId);
@@ -84,7 +146,6 @@ export const App: React.FC = () => {
     const newId = `doc-${Date.now()}`;
     const initialTitle = template.id === 'blank' ? 'Untitled document' : template.name;
 
-    // create() queues local metadata when REST is unreachable — dashboard stays consistent offline
     const created = await create(initialTitle, newId);
     if (template.content && template.id !== 'blank') {
       setPendingContent(template.content);
@@ -93,6 +154,13 @@ export const App: React.FC = () => {
     }
     setCurrentDocId(created.id);
     setCurrentDocTitle(created.title);
+    setAccessState({
+      accessMode: (created.accessMode as DocumentAccessMode) || 'edit',
+      canEdit: true,
+      isOwner: true,
+      shareToken: created.shareToken ?? null,
+      accessDenied: false,
+    });
     setView('editor');
     window.location.hash = `doc=${encodeURIComponent(created.id)}`;
   };
@@ -103,6 +171,7 @@ export const App: React.FC = () => {
       setCurrentDocTitle(doc.title);
     }
     setPendingContent(null);
+    shareTokenRef.current = null;
     setCurrentDocId(id);
     setView('editor');
     window.location.hash = `doc=${encodeURIComponent(id)}`;
@@ -132,12 +201,26 @@ export const App: React.FC = () => {
     setPendingContent(content || null);
     setCurrentDocId(created.id);
     setCurrentDocTitle(created.title);
+    setAccessState({
+      accessMode: 'edit',
+      canEdit: true,
+      isOwner: true,
+      shareToken: created.shareToken ?? null,
+      accessDenied: false,
+    });
     setView('editor');
     window.location.hash = `doc=${encodeURIComponent(created.id)}`;
   };
 
   const handleRename = async (id: string, title: string) => {
+    if (!canEdit) return;
     await rename(id, title);
+  };
+
+  const goHome = () => {
+    setView('dashboard');
+    setAccessState({ accessDenied: false });
+    window.location.hash = '';
   };
 
   if (view === 'dashboard') {
@@ -160,15 +243,36 @@ export const App: React.FC = () => {
     );
   }
 
+  if (accessDenied) {
+    return (
+      <ErrorBoundary fallbackTitle="Access error">
+        <div className="min-h-screen bg-canvas flex flex-col items-center justify-center px-6 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-accent-soft text-accent flex items-center justify-center mb-5">
+            <Lock className="w-5 h-5" />
+          </div>
+          <div className="flex items-center gap-2 mb-3 text-fg">
+            <Hexagon className="w-4 h-4 text-accent" />
+            <span className="ptx-mark text-lg">ProTrux</span>
+          </div>
+          <h1 className="ptx-mark text-3xl text-fg mb-2">Private document</h1>
+          <p className="text-sm text-fg-muted max-w-sm mb-6">
+            Only the owner can open this file. Ask them to set access to View or Edit and share the link.
+          </p>
+          <button type="button" onClick={goHome} className="ptx-btn ptx-btn--accent">
+            Back to library
+          </button>
+        </div>
+        <AppDialog />
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary fallbackTitle="Editor error">
       <div className="flex h-screen w-screen overflow-hidden ptx-desk flex-col font-sans select-none">
         <DocsHeader
           editor={editorInstance}
-          onNavigateHome={() => {
-            setView('dashboard');
-            window.location.hash = '';
-          }}
+          onNavigateHome={goHome}
           onDeleteDocument={() => handleDeleteDocument(currentDocId)}
           onNewDocument={() =>
             handleCreateFromTemplate({
@@ -189,19 +293,19 @@ export const App: React.FC = () => {
           onRestore={toggleSimulatedOffline}
         />
 
-        {crdtManager ? (
+        {accessLoading || !crdtManager ? (
+          <div className="flex-1 flex items-center justify-center text-fg-muted text-sm font-medium">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-elevated border border-line shadow-soft">
+              <span className="w-2 h-2 rounded-full bg-accent animate-pulse-dot" />
+              Loading document…
+            </div>
+          </div>
+        ) : (
           <Editor
             key={`${currentDocId}-${crdtManager.ydoc.clientID}`}
             crdt={crdtManager}
             onEditorReady={(editor) => setEditorInstance(editor)}
           />
-        ) : (
-        <div className="flex-1 flex items-center justify-center text-fg-muted text-sm font-medium">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-elevated border border-line shadow-soft">
-            <span className="w-2 h-2 rounded-full bg-accent animate-pulse-dot" />
-            Loading document…
-          </div>
-        </div>
         )}
 
         <OpenFileModal
@@ -211,7 +315,7 @@ export const App: React.FC = () => {
         <AppDialog />
         <PresenceToasts />
         <JoinIdentityModal
-          isOpen={view === 'editor' && !hasChosenIdentity}
+          isOpen={view === 'editor' && !hasChosenIdentity && !accessDenied}
           initialName={currentUser.name}
           initialColor={currentUser.color}
           onContinue={(user) => {

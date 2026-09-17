@@ -70,8 +70,8 @@ export function useDocuments() {
     try {
       const newDoc = await apiCreateDoc(title, id);
       removeLocalDocument(newDoc.id);
-      addDocument(newDoc);
-      return newDoc;
+      addDocument({ ...newDoc, isOwner: true });
+      return { ...newDoc, isOwner: true };
     } catch (err) {
       const now = Date.now();
       const localDoc: DocumentMetadata = {
@@ -80,6 +80,8 @@ export function useDocuments() {
         createdAt: now,
         updatedAt: now,
         previewText: 'Local draft — syncs when the link returns',
+        accessMode: 'edit',
+        isOwner: true,
       };
       queueLocalDocument(localDoc);
       addDocument(localDoc);
