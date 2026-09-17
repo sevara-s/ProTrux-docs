@@ -4,91 +4,128 @@
 
 /* ─────────────────────────────────────────────
    ProTrux — Signal Desk
-   Carbon drafting table · bone paper · amber signal
+   Light: carbon bar + stone desk + warm paper
+   Dark: night carbon void + amber signal
 ───────────────────────────────────────────── */
 @layer base {
   :root,
   [data-theme='light'] {
-    --ink: #16181d;
-    --signal: #c8890a;
-    --bone: #f3efe6;
-    --carbon: #12141a;
+    /*
+      Day Signal Desk — not Docs white.
+      Carbon header stays branded; stone desk + warm paper carry the light.
+    */
+    --ink: #17191f;
+    --signal: #c4890c;
+    --bone: #f6f1e8;
+    --carbon: #17191f;
 
     --bg-canvas: #ebe6dc;
-    --bg-surface: #f7f3eb;
-    --bg-elevated: #fffcf7;
-    --bg-muted: #e0d9cc;
+    --bg-surface: #f4efe6;
+    --bg-elevated: #fbf7f0;
+    --bg-muted: #ddd6ca;
     --fg: var(--ink);
     --fg-soft: #2c3038;
     --fg-muted: #6b6570;
-    --fg-invert: var(--bone);
-    --border: rgba(22, 24, 29, 0.1);
-    --border-strong: rgba(22, 24, 29, 0.18);
+    --fg-invert: #f6f1e8;
+    --border: rgba(23, 25, 31, 0.1);
+    --border-strong: rgba(23, 25, 31, 0.18);
     --accent: var(--signal);
-    --accent-soft: rgba(200, 137, 10, 0.14);
-    --accent-fg: #16181d;
+    --accent-soft: rgba(196, 137, 12, 0.14);
+    --accent-fg: #17191f;
     --warn: #b45309;
-    --warn-soft: rgba(180, 83, 9, 0.14);
+    --warn-soft: rgba(180, 83, 9, 0.12);
     --live: var(--signal);
-    --live-soft: rgba(200, 137, 10, 0.14);
-    --chrome: var(--carbon);
-    --chrome-fg: #f3efe6;
-    --chrome-muted: rgba(243, 239, 230, 0.55);
-    --paper: #fffcf7;
-    --paper-ink: #16181d;
-    --shadow-soft: 0 1px 0 rgba(22, 24, 29, 0.04), 0 12px 36px -18px rgba(22, 24, 29, 0.2);
-    --shadow-lift: 0 24px 56px -28px rgba(22, 24, 29, 0.35);
-    --shadow-glow: 0 0 0 1px rgba(200, 137, 10, 0.22), 0 14px 40px -16px rgba(200, 137, 10, 0.35);
-    --mesh-a: rgba(200, 137, 10, 0.1);
-    --mesh-b: rgba(22, 24, 29, 0.06);
-    --mesh-c: rgba(200, 137, 10, 0.06);
-    --grid: rgba(243, 239, 230, 0.045);
-    --desk: #12141a;
+    --live-soft: rgba(196, 137, 12, 0.12);
+    /* Brand chrome stays ink — Docs is white bars */
+    --chrome: #17191f;
+    --chrome-fg: #f6f1e8;
+    --chrome-muted: rgba(246, 241, 232, 0.55);
+    --paper: #fbf7f0;
+    --paper-ink: #17191f;
+    --paper-shadow:
+      0 0 0 1px rgba(23, 25, 31, 0.06),
+      0 28px 56px -30px rgba(23, 25, 31, 0.32),
+      0 0 64px -36px rgba(196, 137, 12, 0.14);
+    --shadow-soft: 0 1px 0 rgba(23, 25, 31, 0.04), 0 12px 32px -18px rgba(23, 25, 31, 0.16);
+    --shadow-lift: 0 22px 48px -24px rgba(23, 25, 31, 0.24);
+    --shadow-glow: 0 0 0 1px rgba(196, 137, 12, 0.22), 0 12px 36px -14px rgba(196, 137, 12, 0.25);
+    --mesh-a: rgba(196, 137, 12, 0.09);
+    --mesh-b: rgba(23, 25, 31, 0.04);
+    --mesh-c: rgba(196, 137, 12, 0.05);
+    --grid: rgba(23, 25, 31, 0.06);
+    /* Warm stone drafting table — not Docs gray canvas */
+    --desk: #d9d2c6;
+    --desk-glow: rgba(196, 137, 12, 0.08);
+    /* Format dock: graphite strip, not Material white */
+    --toolbar-bg: #22252c;
+    --toolbar-fg: #f6f1e8;
+    --toolbar-muted: rgba(246, 241, 232, 0.62);
+    --toolbar-hover: rgba(196, 137, 12, 0.16);
+    --toolbar-input: rgba(246, 241, 232, 0.08);
+    --toolbar-line: rgba(246, 241, 232, 0.12);
+    --ruler-bg: #cfc7ba;
+    --ruler-fg: rgba(23, 25, 31, 0.5);
+    --ruler-border: rgba(23, 25, 31, 0.1);
     --spine: var(--signal);
-    --selection: rgba(200, 137, 10, 0.22);
-    --chalk: rgba(243, 239, 230, 0.35);
-    --fork: #e8a84a;
+    --selection: rgba(196, 137, 12, 0.22);
+    --chalk: rgba(23, 25, 31, 0.1);
+    --fork: #c4890c;
   }
 
   [data-theme='dark'] {
+    /* Night desk — deep carbon, bone ink, hot amber */
     --ink: #f3efe6;
     --signal: #e8a84a;
     --bone: #1a1c22;
     --carbon: #0a0b0e;
 
-    --bg-canvas: #0a0b0e;
-    --bg-surface: #12141a;
-    --bg-elevated: #1a1c22;
+    --bg-canvas: #060708;
+    --bg-surface: #101218;
+    --bg-elevated: #181a21;
     --bg-muted: #242730;
     --fg: var(--ink);
-    --fg-soft: #d9d2c5;
-    --fg-muted: #8a8490;
-    --fg-invert: #0a0b0e;
-    --border: rgba(243, 239, 230, 0.08);
-    --border-strong: rgba(243, 239, 230, 0.14);
+    --fg-soft: #e4dccf;
+    --fg-muted: #8f8894;
+    --fg-invert: #060708;
+    --border: rgba(243, 239, 230, 0.1);
+    --border-strong: rgba(243, 239, 230, 0.18);
     --accent: var(--signal);
-    --accent-soft: rgba(232, 168, 74, 0.16);
+    --accent-soft: rgba(232, 168, 74, 0.18);
     --accent-fg: #12141a;
     --warn: #fbbf24;
     --warn-soft: rgba(251, 191, 36, 0.16);
     --live: var(--signal);
     --live-soft: rgba(232, 168, 74, 0.16);
-    --chrome: #060708;
+    --chrome: #08090c;
     --chrome-fg: #f3efe6;
     --chrome-muted: rgba(243, 239, 230, 0.5);
     --paper: #fffcf7;
     --paper-ink: #16181d;
-    --shadow-soft: 0 1px 0 rgba(0, 0, 0, 0.45), 0 14px 40px -12px rgba(0, 0, 0, 0.6);
-    --shadow-lift: 0 28px 64px -22px rgba(0, 0, 0, 0.75);
-    --shadow-glow: 0 0 0 1px rgba(232, 168, 74, 0.28), 0 16px 48px -14px rgba(232, 168, 74, 0.25);
-    --mesh-a: rgba(232, 168, 74, 0.08);
-    --mesh-b: rgba(243, 239, 230, 0.03);
-    --mesh-c: rgba(232, 168, 74, 0.05);
-    --grid: rgba(243, 239, 230, 0.04);
-    --desk: #0c0d10;
+    --paper-shadow:
+      0 0 0 1px rgba(232, 168, 74, 0.08),
+      0 40px 80px -36px rgba(0, 0, 0, 0.85),
+      0 0 120px -40px rgba(232, 168, 74, 0.22);
+    --shadow-soft: 0 1px 0 rgba(0, 0, 0, 0.5), 0 14px 40px -12px rgba(0, 0, 0, 0.65);
+    --shadow-lift: 0 28px 64px -22px rgba(0, 0, 0, 0.8);
+    --shadow-glow: 0 0 0 1px rgba(232, 168, 74, 0.3), 0 16px 48px -14px rgba(232, 168, 74, 0.28);
+    --mesh-a: rgba(232, 168, 74, 0.1);
+    --mesh-b: rgba(243, 239, 230, 0.035);
+    --mesh-c: rgba(232, 168, 74, 0.06);
+    --grid: rgba(243, 239, 230, 0.045);
+    --desk: #0c0d11;
+    --desk-glow: rgba(232, 168, 74, 0.09);
+    --toolbar-bg: #12141a;
+    --toolbar-fg: #f3efe6;
+    --toolbar-muted: rgba(243, 239, 230, 0.62);
+    --toolbar-hover: rgba(232, 168, 74, 0.14);
+    --toolbar-input: rgba(243, 239, 230, 0.08);
+    --toolbar-line: rgba(243, 239, 230, 0.14);
+    --ruler-bg: #0e1014;
+    --ruler-fg: rgba(243, 239, 230, 0.42);
+    --ruler-border: rgba(243, 239, 230, 0.08);
     --spine: var(--signal);
-    --selection: rgba(232, 168, 74, 0.28);
-    --chalk: rgba(243, 239, 230, 0.4);
+    --selection: rgba(232, 168, 74, 0.3);
+    --chalk: rgba(243, 239, 230, 0.35);
     --fork: #e8a84a;
   }
 
@@ -115,15 +152,15 @@
 }
 
 @layer components {
-  /* Signal desk — dark drafting table with fine engineering grid */
+  /* Signal desk — drafting table with engineering grid (theme-aware) */
   .ptx-desk {
     background-color: var(--desk);
     background-image:
-      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(232, 168, 74, 0.07), transparent 55%),
+      radial-gradient(ellipse 70% 50% at 50% 0%, var(--desk-glow), transparent 55%),
       linear-gradient(var(--grid) 1px, transparent 1px),
       linear-gradient(90deg, var(--grid) 1px, transparent 1px);
     background-size: auto, 28px 28px, 28px 28px;
-    transition: background-color 0.45s ease, filter 0.55s ease, background-image 0.45s ease;
+    transition: background-color 0.45s ease, filter 0.55s ease;
   }
 
   .ptx-desk--forked {
@@ -148,10 +185,11 @@
   }
 
   .ptx-workspace-bar {
-    background: color-mix(in srgb, var(--chrome) 94%, transparent);
-    border-bottom: 1px solid color-mix(in srgb, var(--chrome-fg) 8%, transparent);
+    background: color-mix(in srgb, var(--chrome) 96%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--chrome-fg) 10%, transparent);
     color: var(--chrome-fg);
     backdrop-filter: blur(16px) saturate(1.1);
+    transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
   }
 
   .ptx-workspace-bar .theme-toggle__track {
@@ -197,9 +235,10 @@
   .ptx-chrome {
     background: var(--chrome);
     color: var(--chrome-fg);
-    border-bottom: 1px solid color-mix(in srgb, var(--chrome-fg) 8%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--chrome-fg) 10%, transparent);
     position: relative;
     z-index: 40;
+    transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
   }
 
   .ptx-panel {
@@ -224,10 +263,11 @@
   }
 
   .ptx-toolbar {
-    background: color-mix(in srgb, var(--carbon) 92%, #1a1c22);
-    border-bottom: 1px solid color-mix(in srgb, var(--chrome-fg) 8%, transparent);
+    background: var(--toolbar-bg);
+    border-bottom: 1px solid var(--toolbar-line);
     box-shadow: none;
-    color: var(--chrome-fg);
+    color: var(--toolbar-fg);
+    transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
   }
 
   .ptx-toolbar button,
@@ -238,23 +278,28 @@
   .ptx-toolbar .text-fg-soft,
   .ptx-toolbar .text-fg-muted,
   .ptx-toolbar .text-fg {
-    color: rgba(243, 239, 230, 0.72) !important;
+    color: var(--toolbar-muted) !important;
   }
 
   .ptx-toolbar .hover\:bg-accent-soft:hover,
   .ptx-toolbar button:hover {
-    background: rgba(232, 168, 74, 0.12);
+    background: var(--toolbar-hover);
   }
 
   .ptx-toolbar .bg-muted,
   .ptx-toolbar input {
-    background: rgba(243, 239, 230, 0.08) !important;
-    color: var(--chrome-fg) !important;
-    border-color: rgba(243, 239, 230, 0.12) !important;
+    background: var(--toolbar-input) !important;
+    color: var(--toolbar-fg) !important;
+    border-color: var(--toolbar-line) !important;
   }
 
   .ptx-toolbar .w-\[1px\] {
-    background: rgba(243, 239, 230, 0.14) !important;
+    background: var(--toolbar-line) !important;
+  }
+
+  .ptx-toolbar .text-accent,
+  .ptx-toolbar .bg-accent-soft {
+    color: var(--accent) !important;
   }
 
   .ptx-menu {
@@ -392,7 +437,7 @@
   .theme-toggle__thumb--dark {
     transform: translateX(1.45rem);
     color: var(--accent);
-    background: var(--chrome);
+    background: var(--bg-muted);
   }
   .theme-toggle__icon {
     width: 0.75rem;
@@ -430,15 +475,12 @@
   }
 }
 
-/* Writing surface — spotlighted bone paper on carbon desk */
+/* Writing surface — bone paper on theme desk */
 .editorial-paper {
   background: var(--paper);
   color: var(--paper-ink);
   border: 1px solid rgba(22, 24, 29, 0.08);
-  box-shadow:
-    0 0 0 1px rgba(232, 168, 74, 0.06),
-    0 40px 80px -40px rgba(0, 0, 0, 0.65),
-    0 0 120px -40px rgba(232, 168, 74, 0.15);
+  box-shadow: var(--paper-shadow);
   border-radius: 0;
   position: relative;
   box-sizing: border-box;
@@ -469,11 +511,12 @@
   animation: merge-flash 0.9s ease-out both;
 }
 
-/* Industrial measure strip on carbon */
+/* Industrial measure strip — follows theme */
 .ptx-ruler {
-  background: #0e1014;
-  border-bottom: 1px solid rgba(243, 239, 230, 0.08);
-  color: rgba(243, 239, 230, 0.45);
+  background: var(--ruler-bg);
+  border-bottom: 1px solid var(--ruler-border);
+  color: var(--ruler-fg);
+  transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
 }
 
 .ptx-ruler-handle {

@@ -60,10 +60,10 @@ export const DocsRuler: React.FC = () => {
     <div className="ptx-ruler shrink-0 select-none">
       <div className="w-full flex justify-center px-4 py-0">
         <div ref={trackRef} className="relative h-5" style={{ width: widthPx }}>
-          <div className="absolute inset-y-0 left-0 bg-white/[0.04]" style={{ width: leftPx }} />
-          <div className="absolute inset-y-0 right-0 bg-white/[0.04]" style={{ width: rightPx }} />
+          <div className="absolute inset-y-0 left-0 bg-black/[0.06] dark:bg-white/[0.04]" style={{ width: leftPx }} />
+          <div className="absolute inset-y-0 right-0 bg-black/[0.06] dark:bg-white/[0.04]" style={{ width: rightPx }} />
           <div
-            className="absolute inset-y-0 bg-white/[0.07]"
+            className="absolute inset-y-0 bg-accent/[0.08] dark:bg-white/[0.07]"
             style={{ left: leftPx, width: contentWidthPx }}
           />
 
@@ -74,7 +74,7 @@ export const DocsRuler: React.FC = () => {
               style={{ left: t.left, transform: 'translateX(-50%)' }}
             >
               {t.kind === 'major' && t.inch > 0 && t.inch < widthIn && (
-                <span className="text-[8px] leading-none text-white/40 mb-0.5 tabular-nums font-mono">
+                <span className="text-[8px] leading-none text-black/45 dark:text-white/40 mb-0.5 tabular-nums font-mono">
                   {Math.round(t.inch)}
                 </span>
               )}
@@ -83,8 +83,8 @@ export const DocsRuler: React.FC = () => {
                   t.kind === 'major'
                     ? 'h-2.5 bg-accent/80'
                     : t.kind === 'half'
-                      ? 'h-2 bg-white/35'
-                      : 'h-1 bg-white/20'
+                      ? 'h-2 bg-black/30 dark:bg-white/35'
+                      : 'h-1 bg-black/18 dark:bg-white/20'
                 }`}
               />
             </div>
