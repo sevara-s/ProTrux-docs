@@ -67,7 +67,29 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const personaBtnRef = useRef<HTMLButtonElement>(null);
+  const presenceBtnRef = useRef<HTMLDivElement>(null);
   const [personaPos, setPersonaPos] = useState({ top: 0, left: 0 });
+  const [presencePos, setPresencePos] = useState({ top: 0, left: 0 });
+
+  const peerCount = 1 + collaborators.length;
+  const MAX_FACES = 4;
+  const presenceFaces = [
+    { id: 'self', name: currentUser.name, color: currentUser.color, self: true },
+    ...collaborators.map((c) => ({
+      id: c.id,
+      name: c.name,
+      color: c.color,
+      self: false,
+    })),
+  ].slice(0, MAX_FACES);
+  const presenceOverflow = Math.max(0, peerCount - MAX_FACES);
+
+  const initials = (name: string) => {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  };
 
   useEffect(() => setTitleInput(title), [title]);
   useEffect(() => {
@@ -103,6 +125,23 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
       const width = 256;
       const left = Math.min(rect.right - width, window.innerWidth - width - 8);
       setPersonaPos({ top: rect.bottom + 4, left: Math.max(8, left) });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [activeMenu]);
+
+  useLayoutEffect(() => {
+    if (activeMenu !== 'presence' || !presenceBtnRef.current) return;
+    const place = () => {
+      const rect = presenceBtnRef.current!.getBoundingClientRect();
+      const width = 260;
+      const left = Math.min(rect.right - width, window.innerWidth - width - 8);
+      setPresencePos({ top: rect.bottom + 4, left: Math.max(8, left) });
     };
     place();
     window.addEventListener('resize', place);
@@ -178,8 +217,6 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
     if (syncStatus === 'error') return 'RETRY';
     return 'MERGED';
   };
-
-  const peerCount = 1 + collaborators.length;
 
   const Menu: React.FC<{ id: string; label: string; children: React.ReactNode; wide?: number }> = ({
     id,
@@ -365,6 +402,110 @@ export const DocsHeader: React.FC<DocsHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Live presence — Docs-style facepile */}
+          <div className="relative flex items-center" ref={presenceBtnRef}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveMenu(activeMenu === 'presence' ? null : 'presence');
+              }}
+              className="flex items-center pl-1 pr-0.5 py-0.5 rounded-md hover:bg-white/10 transition-colors"
+              title={
+                collaborators.length === 0
+                  ? `${currentUser.name} (you) — alone on this page`
+                  : `${peerCount} people on this page`
+              }
+              aria-label="People on this document"
+            >
+              <div className="flex items-center -space-x-2">
+                {presenceFaces.map((face, i) => (
+                  <span
+                    key={face.id}
+                    className="relative inline-flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-[#12141a] ring-2 ring-[var(--chrome)] shadow-sm"
+                    style={{
+                      backgroundColor: face.color,
+                      zIndex: presenceFaces.length - i,
+                    }}
+                    title={face.self ? `${face.name} (you)` : face.name}
+                  >
+                    {initials(face.name)}
+                  </span>
+                ))}
+                {presenceOverflow > 0 && (
+                  <span
+                    className="relative inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-[10px] font-bold text-chrome-fg ring-2 ring-[var(--chrome)]"
+                    style={{ zIndex: 0 }}
+                  >
+                    +{presenceOverflow}
+                  </span>
+                )}
+              </div>
+            </button>
+            {activeMenu === 'presence' &&
+              typeof document !== 'undefined' &&
+              createPortal(
+                <div
+                  data-header-menu
+                  className="ptx-menu"
+                  style={{
+                    position: 'fixed',
+                    top: presencePos.top,
+                    left: presencePos.left,
+                    width: 260,
+                    zIndex: 9999,
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <p className="px-3.5 py-1.5 text-[10px] font-mono uppercase tracking-widest text-fg-muted">
+                    On this page · {peerCount}
+                  </p>
+                  <div className="px-3.5 py-2 flex items-center gap-2.5">
+                    <span
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-[#12141a] ring-2 ring-accent/40"
+                      style={{ backgroundColor: currentUser.color }}
+                    >
+                      {initials(currentUser.name)}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-fg truncate">
+                        {currentUser.name}{' '}
+                        <span className="text-fg-muted font-normal">(you)</span>
+                      </p>
+                      <p className="text-[10px] text-fg-muted font-mono uppercase tracking-wide">
+                        {syncLabel()}
+                      </p>
+                    </div>
+                  </div>
+                  {collaborators.length > 0 && <div className="h-px bg-line my-1" />}
+                  {collaborators.map((c) => (
+                    <div key={c.id} className="px-3.5 py-2 flex items-center gap-2.5">
+                      <span
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-[#12141a]"
+                        style={{ backgroundColor: c.color }}
+                      >
+                        {initials(c.name)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-fg truncate">{c.name}</p>
+                        <p className="text-[10px] text-fg-muted">Live · editing now</p>
+                      </div>
+                      <span
+                        className="ml-auto w-1.5 h-1.5 rounded-full bg-accent animate-pulse-dot shrink-0"
+                        aria-hidden
+                      />
+                    </div>
+                  ))}
+                  {collaborators.length === 0 && (
+                    <p className="px-3.5 pb-3 text-[11px] text-fg-muted leading-relaxed">
+                      Share an Edit link and open it in another browser — peers appear here live.
+                    </p>
+                  )}
+                </div>,
+                document.body
+              )}
+          </div>
+
           <ThemeToggle compact className="hidden sm:inline-flex" />
 
           <div className="relative">
