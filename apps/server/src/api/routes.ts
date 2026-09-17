@@ -1,14 +1,25 @@
 import { FastifyInstance } from 'fastify';
-import { db } from '../db/database';
-import { docs } from '../crdt/persistence';
+import { normalizeDocId } from '@protrux/shared';
+import { db } from '../db/database.js';
+import { docs, destroyRoom } from '../crdt/persistence.js';
 import * as Y from 'yjs';
 
 export async function registerRoutes(app: FastifyInstance) {
-  // Health check
-  app.get('/api/health', async () => {
+  // Health check — verify SQLite is reachable
+  app.get('/api/health', async (_req, reply) => {
+    try {
+      db.listDocuments();
+    } catch (err) {
+      return reply.status(503).send({
+        status: 'unhealthy',
+        error: err instanceof Error ? err.message : 'database unavailable',
+        timestamp: Date.now(),
+      });
+    }
+
     let activeConnections = 0;
     docs.forEach((doc: any) => {
-      activeConnections += doc.conns.size;
+      activeConnections += doc.conns?.size ?? 0;
     });
 
     return {
@@ -20,7 +31,6 @@ export async function registerRoutes(app: FastifyInstance) {
     };
   });
 
-  // List all documents
   app.get('/api/documents', async () => {
     const list = db.listDocuments();
     return list.map((item) => {
@@ -32,9 +42,8 @@ export async function registerRoutes(app: FastifyInstance) {
     });
   });
 
-  // Get specific document metadata
   app.get('/api/documents/:id', async (req, reply) => {
-    const { id } = req.params as { id: string };
+    const id = normalizeDocId((req.params as { id: string }).id);
     const doc = db.getDocument(id);
     if (!doc) {
       return reply.status(404).send({ error: 'Document not found' });
@@ -46,11 +55,16 @@ export async function registerRoutes(app: FastifyInstance) {
     };
   });
 
-  // Create new document
   app.post('/api/documents', async (req, reply) => {
-    const body = req.body as { id?: string; title?: string };
-    const title = (body.title || 'Untitled Document').trim();
-    const id = (body.id || `doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`).trim();
+    const body = (req.body || {}) as { id?: string; title?: string };
+    const title = (body.title || 'Untitled Document').trim().slice(0, 200);
+    const id = normalizeDocId(
+      body.id || `doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
+    );
+
+    if (!title) {
+      return reply.status(400).send({ error: 'Title is required' });
+    }
 
     const existing = db.getDocument(id);
     if (existing) {
@@ -61,10 +75,16 @@ export async function registerRoutes(app: FastifyInstance) {
     return reply.status(201).send(created);
   });
 
-  // Update document metadata (title, preview)
   app.patch('/api/documents/:id', async (req, reply) => {
-    const { id } = req.params as { id: string };
-    const body = req.body as { title?: string; previewText?: string };
+    const id = normalizeDocId((req.params as { id: string }).id);
+    const body = (req.body || {}) as { title?: string; previewText?: string };
+
+    if (body.title !== undefined) {
+      body.title = body.title.trim().slice(0, 200);
+      if (!body.title) {
+        return reply.status(400).send({ error: 'Title cannot be empty' });
+      }
+    }
 
     const success = db.updateDocument(id, body);
     if (!success) {
@@ -74,30 +94,31 @@ export async function registerRoutes(app: FastifyInstance) {
     return db.getDocument(id);
   });
 
-  // Delete document
   app.delete('/api/documents/:id', async (req, reply) => {
-    const { id } = req.params as { id: string };
-    
-    // If loaded in memory, destroy it
-    const liveDoc = docs.get(id);
-    if (liveDoc) {
-      liveDoc.destroy();
-      docs.delete(id);
+    const id = normalizeDocId((req.params as { id: string }).id);
+
+    const existing = db.getDocument(id);
+    if (!existing) {
+      return reply.status(404).send({ error: 'Document not found' });
     }
 
+    // Close sockets + clear compaction timers before deleting rows
+    destroyRoom(id);
+
     const deleted = db.deleteDocument(id);
-    return { success: deleted, id };
+    if (!deleted) {
+      return reply.status(404).send({ error: 'Document not found' });
+    }
+    return { success: true, id };
   });
 
-  // Export document content
   app.get('/api/documents/:id/export', async (req, reply) => {
-    const { id } = req.params as { id: string };
+    const id = normalizeDocId((req.params as { id: string }).id);
     const meta = db.getDocument(id);
     if (!meta) {
       return reply.status(404).send({ error: 'Document not found' });
     }
 
-    // Read Yjs document representation
     let ydoc = docs.get(id);
     let shouldDestroy = false;
 
@@ -126,8 +147,10 @@ export async function registerRoutes(app: FastifyInstance) {
       id: meta.id,
       title: meta.title,
       updatedAt: meta.updatedAt,
-      rawXml,
+      html: rawXml,
+      markdown: plainText,
       plainText,
+      rawXml,
     };
   });
 }

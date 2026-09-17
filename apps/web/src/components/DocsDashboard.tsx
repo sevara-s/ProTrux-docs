@@ -1,22 +1,19 @@
 import React, { useState } from 'react';
 import {
   Search,
-  Grid,
+  LayoutGrid,
   List as ListIcon,
-  Folder,
-  MoreVertical,
-  ChevronDown,
-  Plus,
-  ArrowUpDown,
+  Upload,
   FileText,
   Trash2,
-  Edit2,
-  ExternalLink,
-  Menu,
-  Sparkles,
+  Plus,
+  ArrowUpRight,
+  Hexagon,
+  Zap,
 } from 'lucide-react';
 import { DocumentMetadata, TEMPLATES, DocumentTemplate } from '@protrux/shared';
 import { useModalStore } from '@/store/modal-store';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface DocsDashboardProps {
   documents: DocumentMetadata[];
@@ -35,7 +32,6 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [activeMenuDocId, setActiveMenuDocId] = useState<string | null>(null);
 
   const filteredDocs = documents.filter((doc) =>
     doc.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -47,154 +43,145 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
     if (date.toDateString() === now.toDateString()) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
   return (
-    <div className="min-h-screen bg-[#fafaf9] text-stone-900 font-sans flex flex-col select-none">
-      {/* 1. ProTrux Canvas App Header */}
-      <header className="h-16 px-6 flex items-center justify-between border-b border-stone-200/80 sticky top-0 bg-white/95 backdrop-blur-md z-30 shadow-2xs">
-        {/* Left: Brand Identity */}
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white shadow-xs">
-            <Sparkles className="w-5 h-5" />
+    <div className="min-h-screen bg-canvas text-fg font-sans flex flex-col select-none overflow-x-hidden">
+      {/* Hero */}
+      <section className="ptx-hero min-h-[min(78vh,680px)]">
+        <div className="ptx-hero__mesh" />
+        <div className="ptx-hero__grid" />
+        <div className="absolute -right-20 top-[18%] w-[380px] h-[380px] rounded-full border border-white/10 animate-orbit pointer-events-none" />
+        <div className="absolute right-8 top-[26%] w-[240px] h-[240px] rounded-full border border-accent/25 pointer-events-none" />
+
+        <header className="relative z-10 flex items-center justify-between px-6 md:px-12 pt-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-accent text-accent-fg flex items-center justify-center shadow-glow">
+              <Hexagon className="w-5 h-5" strokeWidth={2.25} />
+            </div>
+            <div className="leading-tight">
+              <p className="text-[10px] font-mono uppercase tracking-[0.28em] text-chrome-muted">ProTrux</p>
+              <p className="text-xs font-semibold text-chrome-fg/90">Collaborative studio</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-base font-bold text-stone-900 tracking-tight">ProTrux Canvas</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full border border-stone-200">
-              Workspace
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold text-accent-fg ring-2 ring-accent/40"
+              style={{ backgroundColor: currentUser.color }}
+              title={currentUser.name}
+            >
+              {currentUser.name.charAt(0).toUpperCase()}
+            </div>
+          </div>
+        </header>
+
+        <div className="relative z-10 px-6 md:px-12 pt-16 md:pt-24 pb-20 max-w-5xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 mb-6 animate-rise-in">
+            <Zap className="w-3.5 h-3.5 text-accent" />
+            <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-chrome-muted">
+              CRDT · Offline-first · Live cursors
             </span>
           </div>
-        </div>
-
-        {/* Center: Search Bar */}
-        <div className="flex-1 max-w-xl mx-6">
-          <div className="relative group">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-              <Search className="w-4 h-4 text-stone-400 group-focus-within:text-indigo-600 transition-colors" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search documents or templates..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-12 py-2 bg-stone-100/80 focus:bg-white text-xs text-stone-800 rounded-xl border border-transparent focus:border-indigo-500/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:shadow-xs transition-all placeholder-stone-400"
-            />
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-              <kbd className="text-[10px] text-stone-400 font-mono bg-stone-200/60 px-1.5 py-0.5 rounded">⌘K</kbd>
-            </div>
+          <h1 className="ptx-mark text-[clamp(3.25rem,10vw,7rem)] leading-[0.9] text-chrome-fg animate-rise-delay">
+            Write in
+            <span className="block text-accent">
+              parallel.
+            </span>
+          </h1>
+          <p className="mt-7 max-w-lg text-chrome-muted text-base md:text-lg leading-relaxed font-medium animate-rise-late">
+            ProTrux merges every keystroke without conflict — across tabs, networks, and timezones.
+          </p>
+          <div className="mt-10 flex flex-wrap gap-3 animate-rise-late">
+            <button type="button" onClick={() => onCreateFromTemplate(TEMPLATES[0])} className="ptx-btn ptx-btn--primary">
+              <Plus className="w-4 h-4" strokeWidth={2.5} />
+              New document
+              <ArrowUpRight className="w-4 h-4 opacity-80" />
+            </button>
+            <button
+              type="button"
+              onClick={() => useModalStore.getState().openModal('open-file')}
+              className="ptx-btn ptx-btn--ghost"
+            >
+              <Upload className="w-4 h-4" />
+              Import file
+            </button>
           </div>
         </div>
+      </section>
 
-        {/* Right: User Profile Avatar */}
-        <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shadow-xs cursor-pointer ring-2 ring-white"
-            style={{ backgroundColor: currentUser.color }}
-            title={`Active Persona: ${currentUser.name}`}
-          >
-            {currentUser.name.charAt(0).toUpperCase()}
-          </div>
-        </div>
-      </header>
-
-      {/* 2. Template Gallery Section */}
-      <section className="bg-[#f7f6f2] border-b border-stone-200/80 py-8 px-6 md:px-12 lg:px-24">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-5">
+      {/* Templates */}
+      <section className="relative z-20 -mt-10 px-6 md:px-12 mb-12">
+        <div className="max-w-6xl mx-auto rounded-panel bg-surface border border-line shadow-soft px-5 py-5 md:px-6 md:py-6">
+          <div className="flex items-end justify-between mb-5">
             <div>
-              <h2 className="text-sm font-semibold text-stone-900 tracking-tight">Start a new document</h2>
-              <p className="text-xs text-stone-500 mt-0.5">Choose a pre-structured template or begin with a clean editorial page</p>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-stone-600">
-              <span className="text-[11px] font-medium text-stone-500">5 templates ready</span>
+              <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-fg-muted mb-1">Start</p>
+              <h2 className="ptx-mark text-3xl text-fg">Templates</h2>
             </div>
           </div>
-
-          {/* Template Cards Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {TEMPLATES.map((tmpl) => (
-              <div
+          <div className="flex gap-3 overflow-x-auto pb-2 snap-x">
+            {TEMPLATES.map((tmpl, i) => (
+              <button
                 key={tmpl.id}
+                type="button"
                 onClick={() => onCreateFromTemplate(tmpl)}
-                className="group cursor-pointer flex flex-col"
+                className="snap-start shrink-0 w-[210px] text-left group animate-rise-in"
+                style={{ animationDelay: `${i * 45}ms` }}
               >
-                {/* Card preview paper */}
-                <div className="w-full aspect-[3/4] bg-white border border-stone-200/90 rounded-xl hover:border-indigo-500 hover:shadow-md transition-all overflow-hidden relative shadow-2xs group-hover:-translate-y-0.5 flex flex-col justify-between p-3.5">
-                  {tmpl.id === 'blank' ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600 group-hover:scale-110 transition-transform">
-                        <Plus className="w-5 h-5 stroke-[2.5]" />
-                      </div>
-                      <span className="text-[11px] font-medium text-stone-500">Blank Page</span>
-                    </div>
-                  ) : (
-                    <div className="w-full h-full flex flex-col">
-                      <div
-                        className="w-full h-1.5 rounded-full mb-2.5"
-                        style={{ backgroundColor: tmpl.thumbnailColor }}
-                      />
-                      <div className="space-y-1.5 opacity-70">
-                        <div className="w-3/4 h-2 bg-stone-300 rounded-xs" />
-                        <div className="w-full h-1.5 bg-stone-200 rounded-xs" />
-                        <div className="w-5/6 h-1.5 bg-stone-200 rounded-xs" />
-                        <div className="w-4/6 h-1.5 bg-stone-200 rounded-xs" />
-                      </div>
-                      <div className="mt-auto pt-2 border-t border-stone-100 flex items-center justify-between text-[10px] text-stone-400 font-medium">
-                        <span>{tmpl.category}</span>
-                      </div>
-                    </div>
-                  )}
+                <div className="ptx-panel h-[132px] p-4 flex flex-col justify-between group-hover:-translate-y-1 overflow-hidden relative">
+                  <div
+                    className="absolute top-0 inset-x-0 h-[3px]"
+                    style={{ background: 'var(--accent)' }}
+                  />
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-fg-muted">{tmpl.category}</span>
+                  <div>
+                    <p className="font-display text-lg text-fg leading-tight group-hover:text-accent transition-colors">
+                      {tmpl.name}
+                    </p>
+                    <p className="text-[11px] text-fg-muted mt-1 line-clamp-2">{tmpl.description}</p>
+                  </div>
                 </div>
-
-                {/* Card Title */}
-                <div className="mt-2 px-0.5">
-                  <p className="text-xs font-semibold text-stone-800 group-hover:text-indigo-600 truncate transition-colors">
-                    {tmpl.name}
-                  </p>
-                  <p className="text-[11px] text-stone-500 truncate">{tmpl.category}</p>
-                </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 3. Recent Documents Section */}
-      <section className="flex-1 py-8 px-6 md:px-12 lg:px-24 bg-white">
+      {/* Archive */}
+      <section className="flex-1 px-6 md:px-12 pb-20">
         <div className="max-w-6xl mx-auto">
-          {/* Controls bar */}
-          <div className="flex items-center justify-between mb-6 text-xs text-stone-600 pb-3 border-b border-stone-200">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between mb-7">
             <div>
-              <h2 className="text-base font-bold text-stone-900 tracking-tight">Recent documents</h2>
-              <p className="text-xs text-stone-500 mt-0.5">Synced with local IndexedDB and cloud CRDT peers</p>
+              <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-fg-muted mb-1">Library</p>
+              <h2 className="ptx-mark text-3xl text-fg">Archive</h2>
+              <p className="text-sm text-fg-muted mt-1">
+                {filteredDocs.length} document{filteredDocs.length === 1 ? '' : 's'} · local + cloud CRDT
+              </p>
             </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => useModalStore.getState().openModal('open-file')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-200 hover:bg-stone-50 text-xs font-medium text-stone-700 transition-colors shadow-2xs"
-                title="Import Word (.docx), Markdown (.md), HTML, or Text"
-              >
-                <Folder className="w-3.5 h-3.5 text-stone-500" />
-                <span>Import File</span>
-              </button>
-
-              <div className="flex items-center gap-1 border-l border-stone-200 pl-3">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 sm:w-72">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted" />
+                <input
+                  type="search"
+                  placeholder="Search archive…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="ptx-input"
+                />
+              </div>
+              <div className="flex rounded-xl overflow-hidden border border-line bg-elevated">
                 <button
                   type="button"
                   onClick={() => setViewMode('grid')}
-                  className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${viewMode === 'grid' ? 'text-indigo-600 bg-indigo-50 font-semibold' : 'text-stone-500'}`}
-                  title="Grid view"
+                  className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-accent text-accent-fg' : 'text-fg-muted hover:bg-muted'}`}
                 >
-                  <Grid className="w-4 h-4" />
+                  <LayoutGrid className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('list')}
-                  className={`p-1.5 rounded-md hover:bg-stone-100 transition-colors ${viewMode === 'list' ? 'text-indigo-600 bg-indigo-50 font-semibold' : 'text-stone-500'}`}
-                  title="List view"
+                  className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-accent text-accent-fg' : 'text-fg-muted hover:bg-muted'}`}
                 >
                   <ListIcon className="w-4 h-4" />
                 </button>
@@ -202,125 +189,80 @@ export const DocsDashboard: React.FC<DocsDashboardProps> = ({
             </div>
           </div>
 
-          {/* Empty state if search returned 0 matches */}
           {filteredDocs.length === 0 && (
-            <div className="py-16 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-stone-100 text-stone-400 flex items-center justify-center mx-auto mb-3">
-                <FileText className="w-6 h-6" />
-              </div>
-              <p className="text-sm font-semibold text-stone-700">No documents found</p>
-              <p className="text-xs text-stone-500 mt-1">Try searching with different keywords or create a new document above.</p>
+            <div className="py-20 text-center border border-dashed border-line rounded-panel bg-surface/60">
+              <FileText className="w-8 h-8 text-fg-muted mx-auto mb-3" />
+              <p className="font-display text-2xl text-fg">Empty shelf</p>
+              <p className="text-sm text-fg-muted mt-1">Create a document or refine your search.</p>
             </div>
           )}
 
-          {/* Grid View */}
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
-              {filteredDocs.map((doc) => (
-                <div
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredDocs.map((doc, i) => (
+                <article
                   key={doc.id}
                   onClick={() => onSelectDocument(doc.id)}
-                  className="group bg-white border border-stone-200/90 hover:border-indigo-500 rounded-xl overflow-hidden cursor-pointer shadow-2xs hover:shadow-md transition-all flex flex-col"
+                  className="ptx-panel group cursor-pointer overflow-hidden animate-rise-in"
+                  style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
                 >
-                  {/* Miniature Paper View */}
-                  <div className="w-full aspect-[4/3] bg-stone-50/80 border-b border-stone-100 p-3.5 flex flex-col justify-start overflow-hidden">
-                    <p className="text-[10px] text-stone-600 line-clamp-4 leading-relaxed font-sans select-none">
-                      {doc.previewText || 'No text preview available. Click to open and begin writing...'}
+                  <div className="h-32 ptx-desk border-b border-line p-4 relative">
+                    <p className="font-serif text-[12px] text-fg-soft/80 line-clamp-4 leading-relaxed">
+                      {doc.previewText || 'Untitled draft waiting for its first sentence…'}
                     </p>
-                  </div>
-
-                  {/* Document Card Footer */}
-                  <div className="p-3 bg-white flex items-center justify-between relative">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-6 h-6 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                        <FileText className="w-3.5 h-3.5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-stone-900 truncate group-hover:text-indigo-600 transition-colors">
-                          {doc.title || 'Untitled document'}
-                        </p>
-                        <p className="text-[11px] text-stone-400">
-                          {formatRelativeTime(doc.updatedAt)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* 3-dots Context Menu */}
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveMenuDocId(activeMenuDocId === doc.id ? null : doc.id);
-                        }}
-                        className="p-1 rounded-md text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition-colors"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-
-                      {activeMenuDocId === doc.id && (
-                        <div
-                          className="absolute right-0 bottom-full mb-1 w-36 bg-white rounded-xl shadow-xl border border-stone-200/90 py-1 z-50 text-xs animate-in fade-in zoom-in-95 duration-100"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onSelectDocument(doc.id);
-                              setActiveMenuDocId(null);
-                            }}
-                            className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-stone-50 text-stone-700 text-left transition-colors"
-                          >
-                            <Edit2 className="w-3.5 h-3.5 text-stone-500" />
-                            <span>Open</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              onDeleteDocument(doc.id, e);
-                              setActiveMenuDocId(null);
-                            }}
-                            className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-rose-50 text-rose-600 text-left transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete</span>
-                          </button>
-                        </div>
-                      )}
+                    <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider bg-chrome text-accent px-2 py-1 rounded-md">
+                        Open <ArrowUpRight className="w-3 h-3" />
+                      </span>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            /* List View */
-            <div className="divide-y divide-stone-100 border border-stone-200 rounded-xl overflow-hidden bg-white shadow-2xs">
-              {filteredDocs.map((doc) => (
-                <div
-                  key={doc.id}
-                  onClick={() => onSelectDocument(doc.id)}
-                  className="group flex items-center justify-between px-4 py-3 hover:bg-stone-50 cursor-pointer transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                      <FileText className="w-4 h-4" />
+                  <div className="p-4 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="font-display text-xl text-fg truncate group-hover:text-accent transition-colors">
+                        {doc.title || 'Untitled document'}
+                      </h3>
+                      <p className="text-[11px] font-mono text-fg-muted mt-1 uppercase tracking-wide">
+                        {formatRelativeTime(doc.updatedAt)}
+                        {doc.activeUsersCount ? ` · ${doc.activeUsersCount} live` : ''}
+                      </p>
                     </div>
-                    <span className="text-xs font-semibold text-stone-900 truncate group-hover:text-indigo-600 transition-colors">
-                      {doc.title || 'Untitled document'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-6 text-xs text-stone-500">
-                    <span className="text-[11px]">{formatRelativeTime(doc.updatedAt)}</span>
                     <button
                       type="button"
                       onClick={(e) => onDeleteDocument(doc.id, e)}
-                      className="p-1.5 rounded-md hover:bg-rose-50 text-stone-400 hover:text-rose-600 transition-colors"
-                      title="Delete document"
+                      className="p-2 rounded-lg text-fg-muted hover:text-accent hover:bg-accent-soft transition-colors shrink-0"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-panel border border-line overflow-hidden bg-elevated shadow-soft divide-y divide-line">
+              {filteredDocs.map((doc) => (
+                <div
+                  key={doc.id}
+                  onClick={() => onSelectDocument(doc.id)}
+                  className="flex items-center justify-between px-5 py-3.5 hover:bg-accent-soft cursor-pointer transition-colors group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-fg truncate group-hover:text-accent">
+                        {doc.title || 'Untitled document'}
+                      </p>
+                      <p className="text-[11px] text-fg-muted font-mono">{formatRelativeTime(doc.updatedAt)}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => onDeleteDocument(doc.id, e)}
+                    className="p-2 rounded-lg text-fg-muted hover:text-accent hover:bg-accent-soft"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
             </div>

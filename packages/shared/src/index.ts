@@ -31,27 +31,24 @@ export interface DocumentExport {
 }
 
 export const USER_PALETTES = [
-  { name: 'Amber', color: '#f59e0b', light: '#fef3c7' },
-  { name: 'Emerald', color: '#10b981', light: '#d1fae5' },
-  { name: 'Sky', color: '#0ea5e9', light: '#e0f2fe' },
-  { name: 'Violet', color: '#8b5cf6', light: '#ede9fe' },
-  { name: 'Rose', color: '#f43f5e', light: '#ffe4e6' },
-  { name: 'Indigo', color: '#6366f1', light: '#e0e7ff' },
-  { name: 'Teal', color: '#14b8a6', light: '#ccfbf1' },
-  { name: 'Orange', color: '#f97316', light: '#ffedd5' },
+  { name: 'Ink', color: '#13201c', light: '#dde6e2' },
+  { name: 'Deep forest', color: '#164f42', light: '#d5e8e1' },
+  { name: 'Forest', color: '#1f6f5c', light: '#d8ebe4' },
+  { name: 'Fern', color: '#3d8f7a', light: '#dff0ea' },
+  { name: 'Sage', color: '#5aab94', light: '#e6f3ee' },
 ];
 
-export const DEFAULT_DOCUMENT_CONTENT = `<h1>The Future of Collaborative Systems</h1>
-<p>Welcome to <strong>ProTrux Docs</strong> — an authorial, local-first collaborative document engine designed with mathematical CRDT consistency.</p>
-<h2>Key Capabilities</h2>
+export const DEFAULT_DOCUMENT_CONTENT = `<h1>Write in parallel.</h1>
+<p>Welcome to <strong>ProTrux</strong> — a local-first collaborative document editor built on mathematical CRDT consistency.</p>
+<h2>What you can demonstrate</h2>
 <ul>
-  <li><strong>Real-time Synchronized Editing:</strong> Microsecond delta dissemination over binary WebSockets.</li>
-  <li><strong>True Offline-First Resilience:</strong> Client-side IndexedDB persistence enables uninterrupted writing without internet connectivity.</li>
-  <li><strong>Conflict-Free Deterministic Merge:</strong> State-vector commutative merging guarantees zero data loss and zero overwrites.</li>
-  <li><strong>Live Presence & Cursors:</strong> Ephemeral user awareness displays remote cursor positions and text selections.</li>
+  <li><strong>Live sync:</strong> Binary Yjs deltas over WebSockets — peers see each keystroke without reload.</li>
+  <li><strong>Offline mode:</strong> IndexedDB keeps drafts through refresh; reconnect merges without overwrites.</li>
+  <li><strong>Deterministic merge:</strong> State-vector CRDTs guarantee strong eventual consistency.</li>
+  <li><strong>Presence:</strong> Named carets, selection highlights, and live collaborators.</li>
 </ul>
 <blockquote>"Simplicity is prerequisite for reliability." — Edsger W. Dijkstra</blockquote>
-<p>Start typing or invite peers to collaborate simultaneously across tabs or devices!</p>`;
+<p>Open a second tab, switch persona, hit offline, and watch both branches converge.</p>`;
 
 export function getRandomUser(): { name: string; color: string } {
   const names = [
@@ -71,5 +68,16 @@ export function getRandomUser(): { name: string; color: string } {
   return { name, color: palette.color };
 }
 
-export * from './templates';
+/** Normalize document IDs so REST metadata and WebSocket rooms always match. */
+export function normalizeDocId(raw: string): string {
+  const cleaned = decodeURIComponent(String(raw || ''))
+    .trim()
+    .replace(/[^a-zA-Z0-9-_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 120);
+  return cleaned || 'welcome-doc';
+}
+
+export * from './templates.js';
 

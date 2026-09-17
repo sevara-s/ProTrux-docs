@@ -1,5 +1,5 @@
 import React from 'react';
-import { WifiOff, RefreshCw, ShieldCheck } from 'lucide-react';
+import { WifiOff, RefreshCw, Shield } from 'lucide-react';
 
 interface OfflineBannerProps {
   isOffline: boolean;
@@ -15,33 +15,39 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
   if (!isOffline) return null;
 
   return (
-    <div className="bg-amber-500 text-stone-950 px-4 py-2 text-xs flex flex-wrap items-center justify-between gap-2 shadow-sm border-b border-amber-600 animate-in slide-in-from-top-2 duration-200">
-      <div className="flex items-center gap-2">
-        <div className="p-1 rounded bg-amber-600 text-white">
-          <WifiOff className="w-3.5 h-3.5 stroke-[2.5]" />
+    <div className="ptx-offline bg-ink text-chrome-fg px-4 py-2.5 text-xs flex flex-wrap items-center justify-between gap-2 border-b border-white/10 animate-rise-in">
+      <div className="flex items-center gap-2.5">
+        <div className="p-1.5 rounded-md bg-accent text-accent-fg">
+          <WifiOff className="w-3.5 h-3.5" strokeWidth={2.5} />
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="font-semibold">
-            {isSimulatedOffline ? 'Simulated Offline Mode Active' : 'Network Disconnected'}:
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="font-bold uppercase tracking-wide font-mono text-[11px] text-accent">
+            {isSimulatedOffline ? 'Simulated partition' : 'Network lost'}
           </span>
-          <span>
-            Edits are saved locally via <strong>IndexedDB CRDT deltas</strong>. Changes will automatically merge upon reconnecting.
+          <span className="text-chrome-muted">
+            — edits persist in IndexedDB and merge on reconnect.
           </span>
         </div>
       </div>
-
       <div className="flex items-center gap-2 ml-auto">
-        <span className="hidden md:flex items-center gap-1 text-[11px] text-amber-950 font-medium">
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Zero Data Loss Guaranteed</span>
+        <span className="hidden md:flex items-center gap-1.5 text-[11px] font-semibold text-chrome-muted">
+          <Shield className="w-3.5 h-3.5" />
+          Zero-loss merge
         </span>
         <button
           type="button"
-          onClick={onRestore}
-          className="flex items-center gap-1 px-2.5 py-1 rounded bg-stone-950 hover:bg-stone-800 text-white font-medium text-xs shadow-xs transition-colors"
+          onClick={
+            isSimulatedOffline
+              ? onRestore
+              : () => {
+                  if (navigator.onLine) window.dispatchEvent(new Event('online'));
+                  else window.location.reload();
+                }
+          }
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent text-accent-fg font-bold text-xs hover:brightness-110 transition-all"
         >
           <RefreshCw className="w-3 h-3" />
-          <span>Restore Connection</span>
+          {isSimulatedOffline ? 'Restore link' : 'Retry sync'}
         </button>
       </div>
     </div>

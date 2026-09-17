@@ -7,10 +7,13 @@ interface DocumentState {
   currentDocTitle: string;
   view: 'dashboard' | 'editor';
   isLoading: boolean;
+  /** HTML to inject once the next editor mounts (templates / imports). */
+  pendingContent: string | null;
   setDocuments: (docs: DocumentMetadata[]) => void;
   setCurrentDocId: (id: string) => void;
   setCurrentDocTitle: (title: string) => void;
   setView: (view: 'dashboard' | 'editor') => void;
+  setPendingContent: (content: string | null) => void;
   addDocument: (doc: DocumentMetadata) => void;
   updateDocTitle: (id: string, title: string) => void;
   removeDocument: (id: string) => void;
@@ -19,14 +22,16 @@ interface DocumentState {
 export const useDocumentStore = create<DocumentState>((set) => ({
   documents: [],
   currentDocId: 'welcome-doc',
-  currentDocTitle: 'Welcome to ProTrux Collaborative Docs',
+  currentDocTitle: 'Welcome to ProTrux',
   view: 'dashboard',
   isLoading: false,
+  pendingContent: null,
 
   setDocuments: (documents) => set({ documents }),
   setCurrentDocId: (currentDocId) => set({ currentDocId }),
   setCurrentDocTitle: (currentDocTitle) => set({ currentDocTitle }),
   setView: (view) => set({ view }),
+  setPendingContent: (pendingContent) => set({ pendingContent }),
 
   addDocument: (doc) =>
     set((state) => ({

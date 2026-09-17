@@ -16,11 +16,12 @@ import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import { CRDTManager } from '../services/crdt';
 import { DocsToolbar } from './DocsToolbar';
-import { DocsRuler } from './DocsRuler';
+import { FolioRail } from './DocsRuler';
 import { ModalProvider } from '@/providers/modal-provider';
+import { useDocumentStore } from '@/store/document-store';
 import { DEFAULT_DOCUMENT_CONTENT } from '@protrux/shared';
 
-// Google Docs Font Size Extension (applied to textStyle)
+/** Inline font-size mark for the format dock. */
 export const FontSize = Extension.create({
   name: 'fontSize',
   addOptions() {
@@ -70,10 +71,7 @@ interface EditorProps {
   onEditorReady?: (editor: any) => void;
 }
 
-export const Editor: React.FC<EditorProps> = ({
-  crdt,
-  onEditorReady,
-}) => {
+export const Editor: React.FC<EditorProps> = ({ crdt, onEditorReady }) => {
   const [zoom, setZoom] = useState(100);
   const [displayLiveWordCount, setDisplayLiveWordCount] = useState(false);
   const [stats, setStats] = useState({
@@ -84,14 +82,18 @@ export const Editor: React.FC<EditorProps> = ({
   });
 
   const editorRef = useRef<HTMLDivElement>(null);
+  const seededRef = useRef(false);
+  const pendingContent = useDocumentStore((state) => state.pendingContent);
+  const setPendingContent = useDocumentStore((state) => state.setPendingContent);
 
-  // Initialize Tiptap with full Google Docs feature set and Yjs CRDT bindings
   const editor = useEditor(
     {
       extensions: [
-        // CRDT Collaboration manages history and state synchronization
         StarterKit.configure({
           history: false,
+          heading: {
+            levels: [1, 2, 3, 4],
+          },
         }),
         Collaboration.configure({
           document: crdt.ydoc,
@@ -108,7 +110,7 @@ export const Editor: React.FC<EditorProps> = ({
             ]
           : []),
         Placeholder.configure({
-          placeholder: 'Type @ to insert, or start typing...',
+          placeholder: 'Start writing — or invite someone to collaborate…',
         }),
         Underline,
         Highlight.configure({
@@ -135,7 +137,7 @@ export const Editor: React.FC<EditorProps> = ({
       ],
       editorProps: {
         attributes: {
-          class: 'editorial-content focus:outline-none min-h-[912px] text-stone-900',
+          class: 'editorial-content focus:outline-none min-h-[70vh] text-paper-ink',
           spellcheck: 'true',
         },
         handleDrop: (view, event, slice, moved) => {
@@ -189,7 +191,7 @@ export const Editor: React.FC<EditorProps> = ({
         updateStatistics(editor);
       },
     },
-    [crdt.docId]
+    [crdt.docId, crdt.ydoc.clientID]
   );
 
   const updateStatistics = (currentEditor: any) => {
@@ -197,7 +199,6 @@ export const Editor: React.FC<EditorProps> = ({
     const words = text.trim() ? text.trim().split(/\s+/).length : 0;
     const chars = text.length;
     const charsNoSpaces = text.replace(/\s/g, '').length;
-    // Calculate estimated pages (approx 500 words or 3000 chars per standard page)
     const pages = Math.max(1, Math.ceil(words / 450));
     setStats({ words, chars, charsNoSpaces, pages });
   };
@@ -211,53 +212,91 @@ export const Editor: React.FC<EditorProps> = ({
     }
   }, [editor, onEditorReady]);
 
-  // Seed default content if welcome doc is empty
   useEffect(() => {
-    if (editor && crdt.docId === 'welcome-doc') {
-      const timer = setTimeout(() => {
+    if (!editor || !pendingContent || seededRef.current) return;
+
+    let cancelled = false;
+    const tryInject = () => {
+      if (cancelled || seededRef.current) return;
+      if (!crdt.isLocalReady) {
+        setTimeout(tryInject, 50);
+        return;
+      }
+      if (editor.isEmpty) {
+        editor.commands.setContent(pendingContent);
+        updateStatistics(editor);
+      }
+      seededRef.current = true;
+      setPendingContent(null);
+    };
+
+    const timer = setTimeout(tryInject, 100);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [editor, pendingContent, crdt, setPendingContent]);
+
+  useEffect(() => {
+    if (!editor || crdt.docId !== 'welcome-doc' || pendingContent || seededRef.current) return;
+
+    let cancelled = false;
+    const trySeed = () => {
+      if (cancelled || seededRef.current) return;
+      if (!crdt.isLocalReady) {
+        setTimeout(trySeed, 50);
+        return;
+      }
+      setTimeout(() => {
+        if (cancelled || seededRef.current) return;
         if (editor.isEmpty) {
           editor.commands.setContent(DEFAULT_DOCUMENT_CONTENT);
           updateStatistics(editor);
         }
-      }, 350);
-      return () => clearTimeout(timer);
-    }
-  }, [editor, crdt.docId]);
+        seededRef.current = true;
+      }, 400);
+    };
+
+    const timer = setTimeout(trySeed, 100);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [editor, crdt, pendingContent]);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#f7f6f2] relative select-text">
-      {/* ProTrux Editorial Command Dock */}
+    <div className="flex-1 flex flex-col min-h-0 ptx-desk relative select-text">
       <DocsToolbar editor={editor} zoom={zoom} onZoomChange={setZoom} />
+      <FolioRail />
 
-      {/* Measurement Ruler */}
-      <DocsRuler />
-
-      {/* Infinite / Paginated Document Canvas */}
-      <div className="flex-1 overflow-y-auto overflow-x-auto py-8 px-4 flex justify-center bg-[#f7f6f2]">
+      <div className="flex-1 overflow-y-auto overflow-x-auto py-8 px-4 flex justify-center">
         <div
           ref={editorRef}
           style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
-          className="transition-transform duration-100 ease-out mb-16"
+          className="transition-transform duration-200 ease-out mb-24 animate-rise-in w-full max-w-[42rem]"
         >
-          {/* ProTrux Editorial Paper Sheet */}
-          <div className="editorial-paper w-[816px] min-h-[1056px] bg-white px-[72px] py-[72px] relative">
+          <div className="editorial-paper w-full min-h-[70vh] px-8 sm:px-12 py-10 sm:py-14 relative">
             <EditorContent editor={editor} />
           </div>
         </div>
       </div>
 
-      {/* Floating Word Count Telemetry Pill (when toggled in Word Count dialog) */}
       {displayLiveWordCount && (
-        <div className="fixed bottom-5 left-6 z-40 bg-stone-900/90 text-stone-100 backdrop-blur-md border border-stone-700/60 rounded-full px-4 py-1.5 shadow-xl text-xs flex items-center gap-3 font-medium">
-          <span><strong>{stats.words}</strong> words</span>
-          <span className="text-stone-500">·</span>
-          <span><strong>{stats.chars}</strong> chars</span>
-          <span className="text-stone-500">·</span>
-          <span>Page <strong>1</strong> of {stats.pages}</span>
+        <div className="fixed bottom-5 left-6 z-40 bg-chrome text-accent border border-accent/20 rounded-xl px-4 py-2.5 shadow-lift text-xs flex items-center gap-3 font-mono uppercase tracking-wide animate-fade-scale">
+          <span>
+            <strong className="text-chrome-fg">{stats.words}</strong> words
+          </span>
+          <span className="text-chrome-muted">·</span>
+          <span>
+            <strong className="text-chrome-fg">{stats.chars}</strong> chars
+          </span>
+          <span className="text-chrome-muted">·</span>
+          <span>
+            Page <strong className="text-chrome-fg">~{stats.pages}</strong>
+          </span>
         </div>
       )}
 
-      {/* Google Docs Global Modals (Word count & Share) */}
       <ModalProvider
         stats={stats}
         displayLiveWordCount={displayLiveWordCount}

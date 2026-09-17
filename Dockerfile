@@ -34,7 +34,7 @@ ENV HOST=0.0.0.0
 RUN corepack enable && corepack prepare pnpm@11.3.0 --activate
 
 # Copy built artifacts and configurations
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/shared/dist ./packages/shared/dist
 COPY apps/server/package.json ./apps/server/
@@ -43,12 +43,15 @@ COPY apps/web/package.json ./apps/web/
 COPY apps/web/dist ./apps/web/dist
 
 # Install production dependencies only
-RUN pnpm install --prod
+RUN pnpm install --prod --frozen-lockfile
 
 # Expose HTTP and WebSocket port
 EXPOSE 4000
 
 # Create data directory for SQLite persistence
 VOLUME [ "/app/data" ]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||4000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["node", "apps/server/dist/index.js"]

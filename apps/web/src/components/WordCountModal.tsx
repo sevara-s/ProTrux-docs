@@ -24,55 +24,46 @@ export const WordCountModal: React.FC<WordCountModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const rows = [
+    { label: 'Pages', value: pages },
+    { label: 'Words', value: words.toLocaleString() },
+    { label: 'Characters', value: chars.toLocaleString() },
+    { label: 'Characters (no spaces)', value: charsNoSpaces.toLocaleString() },
+  ];
+
   return (
-    <div className="fixed inset-0 bg-stone-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-stone-200/90 animate-in fade-in zoom-in-95 duration-150">
-        <div className="flex items-center justify-between pb-3 mb-4 border-b border-stone-200">
-          <h3 className="text-base font-semibold text-stone-900">Word Count</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 text-stone-400 hover:text-stone-700 rounded-full hover:bg-stone-100 transition-colors"
-          >
+    <div className="fixed inset-0 bg-chrome/55 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-scale">
+      <div className="bg-elevated rounded-panel shadow-lift max-w-sm w-full p-6 border border-line">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent mb-1">Telemetry</p>
+            <h3 className="ptx-mark text-2xl text-fg">Word count</h3>
+          </div>
+          <button type="button" onClick={onClose} className="p-1.5 text-fg-muted hover:text-fg rounded-lg hover:bg-muted">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="space-y-3 text-sm text-stone-800">
-          <div className="flex justify-between items-center py-1 border-b border-stone-100">
-            <span className="text-stone-500 text-xs font-medium">Pages</span>
-            <span className="font-semibold text-stone-900">{pages}</span>
-          </div>
-          <div className="flex justify-between items-center py-1 border-b border-stone-100">
-            <span className="text-stone-500 text-xs font-medium">Words</span>
-            <span className="font-semibold text-stone-900">{words.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between items-center py-1 border-b border-stone-100">
-            <span className="text-stone-500 text-xs font-medium">Characters</span>
-            <span className="font-semibold text-stone-900">{chars.toLocaleString()}</span>
-          </div>
-          <div className="flex justify-between items-center py-1">
-            <span className="text-stone-500 text-xs font-medium">Characters (no spaces)</span>
-            <span className="font-semibold text-stone-900">{charsNoSpaces.toLocaleString()}</span>
-          </div>
+        <div className="space-y-0 rounded-xl border border-line overflow-hidden">
+          {rows.map((r) => (
+            <div key={r.label} className="flex justify-between items-center px-4 py-3 border-b border-line last:border-0 bg-muted/30">
+              <span className="text-xs text-fg-muted font-medium">{r.label}</span>
+              <span className="font-mono text-sm font-bold text-fg">{r.value}</span>
+            </div>
+          ))}
         </div>
 
-        <div className="mt-6 pt-4 border-t border-stone-200 flex items-center justify-between">
-          <label className="flex items-center gap-2 text-xs text-stone-600 cursor-pointer select-none">
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-xs text-fg-soft cursor-pointer select-none">
             <input
               type="checkbox"
               checked={displayLive}
               onChange={(e) => onToggleDisplayLive(e.target.checked)}
-              className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-stone-300 accent-indigo-600"
+              className="w-4 h-4 rounded accent-[var(--accent)]"
             />
-            <span>Show live count bar</span>
+            <span>Show live HUD</span>
           </label>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium transition-colors shadow-xs"
-          >
+          <button type="button" onClick={onClose} className="ptx-btn ptx-btn--accent py-2 px-5">
             Done
           </button>
         </div>

@@ -1,41 +1,52 @@
 import path from 'node:path';
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { WebSocketServer } from 'ws';
-import { initCRDTPersistence, utils } from './crdt/persistence';
-import { registerRoutes } from './api/routes';
+import { normalizeDocId } from '@protrux/shared';
+import { initCRDTPersistence, utils, flushAllRooms } from './crdt/persistence.js';
+import { registerRoutes } from './api/routes.js';
+import { db } from './db/database.js';
 
 const { setupWSConnection } = utils;
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const PORT = Number(process.env.PORT) || 4000;
 const HOST = process.env.HOST || '0.0.0.0';
+const isProd = process.env.NODE_ENV === 'production';
 
 async function bootstrap() {
   const app = Fastify({
-    logger: {
-      level: process.env.LOG_LEVEL || 'info',
-      transport: {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          ignore: 'pid,hostname',
-          translateTime: 'SYS:standard',
+    logger: isProd
+      ? { level: process.env.LOG_LEVEL || 'info' }
+      : {
+          level: process.env.LOG_LEVEL || 'info',
+          transport: {
+            target: 'pino-pretty',
+            options: {
+              colorize: true,
+              ignore: 'pid,hostname',
+              translateTime: 'SYS:standard',
+            },
+          },
         },
-      },
-    },
   });
 
-  // Enable CORS for web frontend
   await app.register(cors, {
     origin: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
-  // Serve static assets if production build exists
-  const webDistPath = path.resolve(__dirname, '../../apps/web/dist');
-  const localDistPath = path.resolve(__dirname, '../web/dist');
-  const targetDist = fs.existsSync(webDistPath) ? webDistPath : fs.existsSync(localDistPath) ? localDistPath : null;
+  const candidateDists = [
+    path.resolve(__dirname, '../../web/dist'),
+    path.resolve(__dirname, '../../../apps/web/dist'),
+    path.resolve(process.cwd(), 'apps/web/dist'),
+    path.resolve(process.cwd(), 'web/dist'),
+  ];
+  const targetDist = candidateDists.find((p) => fs.existsSync(p)) || null;
 
   if (targetDist) {
     const fastifyStatic = (await import('@fastify/static')).default;
@@ -51,59 +62,73 @@ async function bootstrap() {
     });
   }
 
-  // Initialize SQLite-backed CRDT persistence engine
   initCRDTPersistence();
-
-  // Register REST API endpoints
   await registerRoutes(app);
 
-  // Bind WebSocket server to the underlying HTTP server
-  const wss = new WebSocketServer({
-    server: app.server,
-  });
+  const wss = new WebSocketServer({ server: app.server });
 
   wss.on('connection', (conn, req) => {
     try {
       const url = req.url || '';
-      // Support patterns: /ws/:docName, /:docName, /ws?room=:docName
-      let docName = 'welcome-doc';
-
-      if (url.startsWith('/ws/')) {
-        docName = url.slice(4).split('?')[0];
-      } else if (url.startsWith('/ws?')) {
-        const queryParams = new URLSearchParams(url.split('?')[1]);
-        docName = queryParams.get('room') || queryParams.get('doc') || 'welcome-doc';
-      } else if (url.length > 1 && !url.startsWith('/api')) {
-        docName = url.slice(1).split('?')[0];
+      if (url.startsWith('/api')) {
+        conn.close(1008, 'Invalid WebSocket path');
+        return;
       }
 
-      // Sanitize docName
-      docName = decodeURIComponent(docName).replace(/[^a-zA-Z0-9-_]/g, '_');
-      if (!docName) docName = 'welcome-doc';
+      let rawName = 'welcome-doc';
 
+      if (url.startsWith('/ws/')) {
+        rawName = url.slice(4).split('?')[0];
+      } else if (url.startsWith('/ws?') || url === '/ws') {
+        const queryParams = new URLSearchParams(url.includes('?') ? url.split('?')[1] : '');
+        rawName = queryParams.get('room') || queryParams.get('doc') || 'welcome-doc';
+      } else if (url.length > 1 && !url.startsWith('/api')) {
+        rawName = url.slice(1).split('?')[0];
+      }
+
+      const docName = normalizeDocId(rawName);
       app.log.info({ docName }, 'Client connected to CRDT room');
       setupWSConnection(conn, req, { docName });
     } catch (err) {
       app.log.error({ err }, 'Error handling WebSocket connection');
-      conn.close();
+      try {
+        conn.close();
+      } catch {
+        // ignore
+      }
     }
   });
 
-  // Start HTTP and WebSocket listening
   await app.listen({ port: PORT, host: HOST });
-  app.log.info(`🚀 ProTrux CRDT Server running on http://${HOST}:${PORT}`);
-  app.log.info(`⚡ Real-time WebSocket endpoint available at ws://${HOST}:${PORT}/ws/:docName`);
+  app.log.info(`ProTrux CRDT Server running on http://${HOST}:${PORT}`);
+  app.log.info(`WebSocket endpoint: ws://${HOST}:${PORT}/ws/:docName`);
 
-  // Graceful shutdown
-  const shutdown = async () => {
-    app.log.info('Gracefully shutting down ProTrux Server...');
-    wss.close();
+  let shuttingDown = false;
+  const shutdown = async (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    app.log.info({ signal }, 'Gracefully shutting down ProTrux Server...');
+
+    try {
+      await flushAllRooms();
+    } catch (err) {
+      app.log.error({ err }, 'Error flushing CRDT rooms');
+    }
+
+    await new Promise<void>((resolve) => wss.close(() => resolve()));
     await app.close();
+
+    try {
+      db.checkpoint();
+    } catch {
+      // ignore
+    }
+
     process.exit(0);
   };
 
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', () => void shutdown('SIGINT'));
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
 }
 
 bootstrap().catch((err) => {

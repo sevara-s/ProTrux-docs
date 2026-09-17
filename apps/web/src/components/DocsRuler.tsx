@@ -1,82 +1,64 @@
 import React from 'react';
+import { useUserStore } from '@/store/user-store';
 
-export const DocsRuler: React.FC = () => {
-  // Standard 8.5" width ruler with 1" margins
-  // Ruler is 816px wide to match the document paper exactly
-  const totalInches = 8;
-  const inches = Array.from({ length: totalInches + 1 }, (_, i) => i);
+/**
+ * Helix presence rail — collaborator color spectrum + folio width cue.
+ * Editorial measure strip tied to live awareness, not a print ruler.
+ */
+const FOREST_TONES = ['#1f6f5c', '#164f42', '#3d8f7a', '#5aab94', '#2d8570', '#4a9e88'];
+
+function toneFor(color: string, index: number) {
+  // Keep brand-aligned forest tones even if an old rainbow profile is in localStorage
+  const hex = (color || '').toLowerCase();
+  if (/^#1f6f5c|^#164f42|^#3d8f7a|^#5aab94|^#13201c|^#2d8570|^#4a9e88/.test(hex)) {
+    return color;
+  }
+  return FOREST_TONES[index % FOREST_TONES.length];
+}
+
+export const FolioRail: React.FC = () => {
+  const collaborators = useUserStore((s) => s.collaborators);
+  const currentUser = useUserStore((s) => s.currentUser);
+  const syncStatus = useUserStore((s) => s.syncStatus);
+
+  const colors = [
+    toneFor(currentUser.color, 0),
+    ...collaborators.map((c, i) => toneFor(c.color, i + 1)),
+  ].slice(0, 8);
+
+  const statusLabel =
+    syncStatus === 'offline'
+      ? 'Offline'
+      : syncStatus === 'synced'
+        ? 'Connected'
+        : syncStatus === 'syncing'
+          ? 'Syncing'
+          : 'Connecting';
 
   return (
-    <div className="w-full bg-[#f7f6f2] flex justify-center border-b border-stone-200/80 select-none py-1">
-      <div className="w-[816px] h-4 bg-stone-100/90 relative flex items-end border-x border-stone-200 rounded-xs shadow-2xs">
-        {/* Left margin area (1 inch = 96px) */}
-        <div className="absolute left-0 top-0 bottom-0 w-[72px] bg-stone-200/70 border-r border-stone-300/80" />
-        {/* Right margin area (1 inch = 96px) */}
-        <div className="absolute right-0 top-0 bottom-0 w-[72px] bg-stone-200/70 border-l border-stone-300/80" />
-
-        {/* Measurement ticks and numbers */}
-        <div className="w-full flex relative h-full">
-          {inches.map((inch) => {
-            const leftPercent = (inch / totalInches) * 100;
-            return (
-              <React.Fragment key={inch}>
-                {/* Inch mark */}
-                <div
-                  className="absolute bottom-0 h-2.5 w-[1px] bg-stone-500"
-                  style={{ left: `${leftPercent}%` }}
-                />
-                {inch > 0 && inch < totalInches && (
-                  <span
-                    className="absolute bottom-2 text-[9px] font-sans text-stone-500 -translate-x-1/2 font-medium"
-                    style={{ left: `${leftPercent}%` }}
-                  >
-                    {inch}
-                  </span>
-                )}
-                {/* 1/2 inch tick */}
-                {inch < totalInches && (
-                  <div
-                    className="absolute bottom-0 h-2 w-[1px] bg-stone-400"
-                    style={{ left: `${((inch + 0.5) / totalInches) * 100}%` }}
-                  />
-                )}
-                {/* 1/4 inch ticks */}
-                {inch < totalInches && (
-                  <>
-                    <div
-                      className="absolute bottom-0 h-1.5 w-[1px] bg-stone-300"
-                      style={{ left: `${((inch + 0.25) / totalInches) * 100}%` }}
-                    />
-                    <div
-                      className="absolute bottom-0 h-1.5 w-[1px] bg-stone-300"
-                      style={{ left: `${((inch + 0.75) / totalInches) * 100}%` }}
-                    />
-                  </>
-                )}
-              </React.Fragment>
-            );
-          })}
+    <div className="w-full flex justify-center select-none py-2 px-4">
+      <div className="w-full max-w-[42rem] flex flex-col gap-1.5">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-fg-muted">
+            {statusLabel}
+          </span>
+          <span className="text-[10px] font-mono text-fg-muted tabular-nums">
+            {1 + collaborators.length} author{collaborators.length === 0 ? '' : 's'}
+          </span>
         </div>
-
-        {/* Left Indent Marker (Triangle + Rectangle marker) */}
-        <div
-          className="absolute top-0 w-3 -translate-x-1/2 cursor-ew-resize group z-10"
-          style={{ left: '72px' }}
-          title="First line indent"
-        >
-          <div className="w-3 h-1 bg-indigo-600 rounded-xs" />
-          <div className="w-0 h-0 border-x-[6px] border-x-transparent border-t-[6px] border-t-indigo-600" />
-        </div>
-
-        {/* Right Margin Marker (Triangle marker) */}
-        <div
-          className="absolute top-0 w-3 -translate-x-1/2 cursor-ew-resize group z-10"
-          style={{ left: `${816 - 72}px` }}
-          title="Right indent"
-        >
-          <div className="w-0 h-0 border-x-[6px] border-x-transparent border-t-[6px] border-t-indigo-600" />
+        <div className="h-1.5 rounded-full overflow-hidden bg-elevated/80 border border-line flex shadow-soft">
+          {colors.map((color, i) => (
+            <div
+              key={`${color}-${i}`}
+              className="h-full flex-1 first:rounded-l-full last:rounded-r-full transition-all duration-500"
+              style={{ backgroundColor: color, opacity: 0.85 + (i === 0 ? 0.15 : 0) }}
+            />
+          ))}
         </div>
       </div>
     </div>
   );
 };
+
+/** @deprecated Use FolioRail — kept as alias during rename. */
+export const DocsRuler = FolioRail;

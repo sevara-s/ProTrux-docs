@@ -1,5 +1,9 @@
 import { create } from 'zustand';
 import { UserPresence, SyncStatus, getRandomUser } from '@protrux/shared';
+import {
+  readSimulatedOfflineFlag,
+  writeSimulatedOfflineFlag,
+} from '@/services/crdt';
 
 interface UserState {
   currentUser: { name: string; color: string };
@@ -25,9 +29,10 @@ const getStoredUser = () => {
   return fresh;
 };
 
-export const useUserStore = create<UserState>((set) => ({
+export const useUserStore = create<UserState>((set, get) => ({
   currentUser: getStoredUser(),
-  isSimulatedOffline: false,
+  // Survive refresh so evaluators can reload while "Offline" and keep IndexedDB path
+  isSimulatedOffline: readSimulatedOfflineFlag(),
   syncStatus: 'connecting',
   collaborators: [],
 
@@ -36,9 +41,16 @@ export const useUserStore = create<UserState>((set) => ({
     set({ currentUser });
   },
 
-  setSimulatedOffline: (isSimulatedOffline) => set({ isSimulatedOffline }),
-  toggleSimulatedOffline: () =>
-    set((state) => ({ isSimulatedOffline: !state.isSimulatedOffline })),
+  setSimulatedOffline: (isSimulatedOffline) => {
+    writeSimulatedOfflineFlag(isSimulatedOffline);
+    set({ isSimulatedOffline });
+  },
+
+  toggleSimulatedOffline: () => {
+    const next = !get().isSimulatedOffline;
+    writeSimulatedOfflineFlag(next);
+    set({ isSimulatedOffline: next });
+  },
 
   setSyncStatus: (syncStatus) => set({ syncStatus }),
   setCollaborators: (collaborators) => set({ collaborators }),

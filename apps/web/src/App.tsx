@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDocuments } from '@/hooks/useDocuments';
 import { useCRDT } from '@/hooks/useCRDT';
 import { useDocumentStore } from '@/store/document-store';
@@ -11,14 +11,22 @@ import { OpenFileModal } from '@/components/OpenFileModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { DocumentTemplate } from '@protrux/shared';
 
+function readDocFromHash(): string | null {
+  const hash = window.location.hash.replace(/^#/, '');
+  if (!hash) return null;
+  const params = new URLSearchParams(hash);
+  return params.get('doc');
+}
+
 export const App: React.FC = () => {
-  const { documents, create, remove } = useDocuments();
+  const { documents, create, remove, rename, refetch } = useDocuments();
 
   const view = useDocumentStore((state) => state.view);
   const setView = useDocumentStore((state) => state.setView);
   const currentDocId = useDocumentStore((state) => state.currentDocId);
   const setCurrentDocId = useDocumentStore((state) => state.setCurrentDocId);
   const setCurrentDocTitle = useDocumentStore((state) => state.setCurrentDocTitle);
+  const setPendingContent = useDocumentStore((state) => state.setPendingContent);
 
   const currentUser = useUserStore((state) => state.currentUser);
   const isSimulatedOffline = useUserStore((state) => state.isSimulatedOffline);
@@ -26,53 +34,60 @@ export const App: React.FC = () => {
   const toggleSimulatedOffline = useUserStore((state) => state.toggleSimulatedOffline);
 
   const [editorInstance, setEditorInstance] = useState<any>(null);
+  const didInitHash = useRef(false);
 
- 
   const crdtManager = useCRDT(view === 'editor' ? currentDocId : '');
 
- 
+  // Refresh document list whenever we land on the dashboard
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace(/^#/, '');
-      const params = new URLSearchParams(hash);
-      const doc = params.get('doc');
+    if (view === 'dashboard') {
+      void refetch();
+    }
+  }, [view, refetch]);
+
+  // Apply deep-link on first load + listen for hash changes
+  useEffect(() => {
+    const applyHash = () => {
+      const doc = readDocFromHash();
       if (doc) {
         setCurrentDocId(doc);
+        const meta = useDocumentStore.getState().documents.find((d) => d.id === doc);
+        if (meta) setCurrentDocTitle(meta.title);
         setView('editor');
-      } else {
+      } else if (didInitHash.current) {
         setView('dashboard');
       }
     };
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [setCurrentDocId, setView]);
+    applyHash();
+    didInitHash.current = true;
 
-  // Handle template selection
+    window.addEventListener('hashchange', applyHash);
+    return () => window.removeEventListener('hashchange', applyHash);
+  }, [setCurrentDocId, setCurrentDocTitle, setView]);
+
+  // Keep title in sync when documents list loads for a deep-linked doc
+  useEffect(() => {
+    if (view !== 'editor') return;
+    const meta = documents.find((d) => d.id === currentDocId);
+    if (meta) setCurrentDocTitle(meta.title);
+  }, [documents, currentDocId, view, setCurrentDocTitle]);
+
   const handleCreateFromTemplate = async (template: DocumentTemplate) => {
     const newId = `doc-${Date.now()}`;
     const initialTitle = template.id === 'blank' ? 'Untitled document' : template.name;
 
-    try {
-      const created = await create(initialTitle, newId);
-      setCurrentDocId(created.id);
-      setCurrentDocTitle(created.title);
-      setView('editor');
-      window.location.hash = `doc=${encodeURIComponent(created.id)}`;
-
-      // Inject template content after initial mount
-      setTimeout(() => {
-        if (editorInstance && template.content) {
-          editorInstance.commands.setContent(template.content);
-        }
-      }, 350);
-    } catch (err) {
-      console.error('Error creating template document:', err);
-      setCurrentDocId(newId);
-      setCurrentDocTitle(initialTitle);
-      setView('editor');
-      window.location.hash = `doc=${encodeURIComponent(newId)}`;
+    // create() queues local metadata when REST is unreachable — dashboard stays consistent offline
+    const created = await create(initialTitle, newId);
+    if (template.content && template.id !== 'blank') {
+      setPendingContent(template.content);
+    } else {
+      setPendingContent(null);
     }
+    setCurrentDocId(created.id);
+    setCurrentDocTitle(created.title);
+    setView('editor');
+    window.location.hash = `doc=${encodeURIComponent(created.id)}`;
   };
 
   const handleSelectDocument = (id: string) => {
@@ -80,6 +95,7 @@ export const App: React.FC = () => {
     if (doc) {
       setCurrentDocTitle(doc.title);
     }
+    setPendingContent(null);
     setCurrentDocId(id);
     setView('editor');
     window.location.hash = `doc=${encodeURIComponent(id)}`;
@@ -98,31 +114,21 @@ export const App: React.FC = () => {
 
   const handleImportContent = async (title: string, content: string) => {
     const newId = `doc-${Date.now()}`;
-    try {
-      const created = await create(title, newId);
-      setCurrentDocId(created.id);
-      setCurrentDocTitle(created.title);
-      setView('editor');
-      window.location.hash = `doc=${encodeURIComponent(created.id)}`;
-
-      setTimeout(() => {
-        if (editorInstance && content) {
-          editorInstance.commands.setContent(content);
-        }
-      }, 350);
-    } catch (err) {
-      console.error('Error importing content:', err);
-      setCurrentDocId(newId);
-      setCurrentDocTitle(title);
-      setView('editor');
-      window.location.hash = `doc=${encodeURIComponent(newId)}`;
-    }
+    const created = await create(title, newId);
+    setPendingContent(content || null);
+    setCurrentDocId(created.id);
+    setCurrentDocTitle(created.title);
+    setView('editor');
+    window.location.hash = `doc=${encodeURIComponent(created.id)}`;
   };
 
-  // Google Docs Dashboard View (https://docs.google.com/document/u/0/)
+  const handleRename = async (id: string, title: string) => {
+    await rename(id, title);
+  };
+
   if (view === 'dashboard') {
     return (
-      <ErrorBoundary fallbackTitle="Google Docs Home Dashboard Error">
+      <ErrorBoundary fallbackTitle="Home error">
         <DocsDashboard
           documents={documents}
           onSelectDocument={handleSelectDocument}
@@ -138,57 +144,56 @@ export const App: React.FC = () => {
     );
   }
 
-  // Google Docs Editor View
   return (
-    <ErrorBoundary fallbackTitle="ProTrux Canvas Editor Error">
-      <div className="flex h-screen w-screen overflow-hidden bg-[#f7f6f2] flex-col font-sans select-none">
-      {/* Google Docs Top Header & Menus */}
-      <DocsHeader
-        editor={editorInstance}
-        onNavigateHome={() => {
-          setView('dashboard');
-          window.location.hash = '';
-        }}
-        onDeleteDocument={() => handleDeleteDocument(currentDocId)}
-        onNewDocument={() =>
-          handleCreateFromTemplate({
-            id: 'blank',
-            name: 'Untitled document',
-            category: 'General',
-            description: 'Blank',
-            thumbnailColor: '#ffffff',
-            content: '<p></p>',
-          })
-        }
-      />
-
-      {/* Offline Alert Banner */}
-      <OfflineBanner
-        isOffline={syncStatus === 'offline'}
-        isSimulatedOffline={isSimulatedOffline}
-        onRestore={toggleSimulatedOffline}
-      />
-
-      {/* Google Docs Editor Canvas, Toolbar, Ruler & Modals */}
-      {crdtManager ? (
-        <Editor
-          key={currentDocId}
-          crdt={crdtManager}
-          onEditorReady={(editor) => setEditorInstance(editor)}
+    <ErrorBoundary fallbackTitle="Editor error">
+      <div className="flex h-screen w-screen overflow-hidden ptx-desk flex-col font-sans select-none">
+        <DocsHeader
+          editor={editorInstance}
+          onNavigateHome={() => {
+            setView('dashboard');
+            window.location.hash = '';
+          }}
+          onDeleteDocument={() => handleDeleteDocument(currentDocId)}
+          onNewDocument={() =>
+            handleCreateFromTemplate({
+              id: 'blank',
+              name: 'Untitled document',
+              category: 'General',
+              description: 'Blank',
+              thumbnailColor: '#ffffff',
+              content: '<p></p>',
+            })
+          }
+          onRenameDocument={handleRename}
         />
-      ) : (
-        <div className="flex-1 flex items-center justify-center text-[#5f6368] text-sm">
-          Loading document...
-        </div>
-      )}
 
-      {/* Open / Upload File Modal */}
-      <OpenFileModal
-        onOpenDocument={handleSelectDocument}
-        onImportContent={handleImportContent}
-      />
-    </div>
-  </ErrorBoundary>
+        <OfflineBanner
+          isOffline={syncStatus === 'offline'}
+          isSimulatedOffline={isSimulatedOffline}
+          onRestore={toggleSimulatedOffline}
+        />
+
+        {crdtManager ? (
+          <Editor
+            key={`${currentDocId}-${crdtManager.ydoc.clientID}`}
+            crdt={crdtManager}
+            onEditorReady={(editor) => setEditorInstance(editor)}
+          />
+        ) : (
+        <div className="flex-1 flex items-center justify-center text-fg-muted text-sm font-medium">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-elevated border border-line shadow-soft">
+            <span className="w-2 h-2 rounded-full bg-accent animate-pulse-dot" />
+            Loading document…
+          </div>
+        </div>
+        )}
+
+        <OpenFileModal
+          onOpenDocument={handleSelectDocument}
+          onImportContent={handleImportContent}
+        />
+      </div>
+    </ErrorBoundary>
   );
 };
 

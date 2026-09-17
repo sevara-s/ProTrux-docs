@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
-import { DEFAULT_DOCUMENT_CONTENT, DocumentMetadata } from '@protrux/shared';
+import type { DocumentMetadata } from '@protrux/shared';
 
 export class Database {
   private db: DatabaseSync;
@@ -21,8 +21,9 @@ export class Database {
   private init() {
     this.db.exec('PRAGMA journal_mode = WAL;');
     this.db.exec('PRAGMA synchronous = NORMAL;');
+    this.db.exec('PRAGMA foreign_keys = ON;');
+    this.db.exec('PRAGMA busy_timeout = 5000;');
 
-    
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS documents (
         id TEXT PRIMARY KEY,
@@ -43,7 +44,6 @@ export class Database {
       );
     `);
 
- 
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS document_updates (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,6 +52,11 @@ export class Database {
         created_at INTEGER NOT NULL,
         FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
       );
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_document_updates_document_id
+      ON document_updates(document_id);
     `);
 
     this.seedDefaultDocumentIfEmpty();
@@ -119,7 +124,7 @@ export class Database {
     return {
       id,
       title,
-      previewText,
+      previewText: previewText || '',
       createdAt: now,
       updatedAt: now,
     };
@@ -152,25 +157,33 @@ export class Database {
   }
 
   public deleteDocument(id: string): boolean {
-    // Delete updates and snapshot
-    this.db.prepare('DELETE FROM document_updates WHERE document_id = ?').run(id);
-    this.db.prepare('DELETE FROM document_snapshots WHERE document_id = ?').run(id);
-    const res = this.db.prepare('DELETE FROM documents WHERE id = ?').run(id);
-    return (res as any)?.changes > 0 || true;
+    const deleteAll = this.db.prepare(`
+      DELETE FROM documents WHERE id = ?
+    `);
+    // Cascades remove snapshots/updates when foreign_keys=ON; also delete explicitly for safety.
+    this.db.exec('BEGIN');
+    try {
+      this.db.prepare('DELETE FROM document_updates WHERE document_id = ?').run(id);
+      this.db.prepare('DELETE FROM document_snapshots WHERE document_id = ?').run(id);
+      const res = deleteAll.run(id) as { changes: number };
+      this.db.exec('COMMIT');
+      return Number(res?.changes ?? 0) > 0;
+    } catch (err) {
+      this.db.exec('ROLLBACK');
+      throw err;
+    }
   }
 
   public saveUpdate(documentId: string, updateData: Uint8Array) {
-    // Check if doc exists in metadata, if not create automatically
+    // Never auto-create here — deleted docs must stay deleted.
+    // Room bindState is responsible for creating metadata on first open.
     const existing = this.getDocument(documentId);
-    const now = Date.now();
     if (!existing) {
-      const readableTitle = documentId
-        .replace(/[-_]/g, ' ')
-        .replace(/\b\w/g, (c) => c.toUpperCase());
-      this.createDocument(documentId, readableTitle);
-    } else {
-      this.touchDocument(documentId);
+      throw new Error(`Cannot persist update for unknown document: ${documentId}`);
     }
+
+    const now = Date.now();
+    this.touchDocument(documentId);
 
     const stmt = this.db.prepare(`
       INSERT INTO document_updates (document_id, update_data, created_at)
@@ -201,20 +214,58 @@ export class Database {
     return new Uint8Array(row.snapshotData);
   }
 
-  public saveSnapshotAndPruneUpdates(documentId: string, snapshotData: Uint8Array) {
-    const now = Date.now();
-    // Upsert snapshot
-    const upsert = this.db.prepare(`
-      INSERT INTO document_snapshots (document_id, snapshot_data, updated_at)
-      VALUES (?, ?, ?)
-      ON CONFLICT(document_id) DO UPDATE SET
-        snapshot_data = excluded.snapshot_data,
-        updated_at = excluded.updated_at
-    `);
-    upsert.run(documentId, snapshotData, now);
+  /** Highest update row id currently persisted for a document (0 if none). */
+  public getMaxUpdateId(documentId: string): number {
+    const row = this.db
+      .prepare(
+        `SELECT COALESCE(MAX(id), 0) as maxId FROM document_updates WHERE document_id = ?`
+      )
+      .get(documentId) as { maxId: number | bigint } | undefined;
+    return Number(row?.maxId ?? 0);
+  }
 
-    // Prune incremental updates that have been compacted into the snapshot
-    this.db.prepare('DELETE FROM document_updates WHERE document_id = ?').run(documentId);
+  /**
+   * Atomically store a compacted snapshot and prune only updates that existed
+   * at watermark time. Newer updates (id > maxUpdateId) are preserved so
+   * concurrent writes during compaction cannot be lost.
+   */
+  public saveSnapshotAndPruneUpdates(
+    documentId: string,
+    snapshotData: Uint8Array,
+    maxUpdateId?: number
+  ) {
+    const now = Date.now();
+    const watermark =
+      maxUpdateId === undefined ? this.getMaxUpdateId(documentId) : maxUpdateId;
+
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const upsert = this.db.prepare(`
+        INSERT INTO document_snapshots (document_id, snapshot_data, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(document_id) DO UPDATE SET
+          snapshot_data = excluded.snapshot_data,
+          updated_at = excluded.updated_at
+      `);
+      upsert.run(documentId, snapshotData, now);
+
+      if (watermark > 0) {
+        this.db
+          .prepare(
+            `DELETE FROM document_updates WHERE document_id = ? AND id <= ?`
+          )
+          .run(documentId, watermark);
+      }
+
+      this.db.exec('COMMIT');
+    } catch (err) {
+      this.db.exec('ROLLBACK');
+      throw err;
+    }
+  }
+
+  public checkpoint() {
+    this.db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
   }
 }
 

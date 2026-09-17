@@ -37,22 +37,22 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#f9fbfd] flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-white rounded-xl shadow-lg border border-[#dadce0] p-6 text-center">
-            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+        <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-elevated rounded-panel shadow-lift border border-line p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-accent-soft text-accent flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="w-6 h-6" />
             </div>
 
-            <h2 className="text-lg font-semibold text-[#202124] mb-2">
-              {this.props.fallbackTitle || 'Document Rendering Error'}
+            <h2 className="ptx-mark text-lg text-fg mb-2">
+              {this.props.fallbackTitle || 'Document rendering error'}
             </h2>
 
-            <p className="text-xs text-[#5f6368] mb-4">
-              An unexpected error occurred while rendering the editor component. Your document state in IndexedDB and SQLite remains secure.
+            <p className="text-xs text-fg-muted mb-4">
+              An unexpected error occurred while rendering the editor. Your document state in IndexedDB and SQLite remains secure.
             </p>
 
             {this.state.error && (
-              <pre className="bg-[#f8f9fa] border border-[#dadce0] rounded p-3 text-[11px] text-red-600 text-left overflow-x-auto mb-5 font-mono">
+              <pre className="bg-muted border border-line rounded-lg p-3 text-[11px] text-accent text-left overflow-x-auto mb-5 font-mono">
                 {this.state.error.message}
               </pre>
             )}
@@ -64,16 +64,16 @@ export class ErrorBoundary extends Component<Props, State> {
                   window.location.hash = '';
                   window.location.reload();
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded-lg text-xs font-medium transition-colors shadow-xs"
+                className="flex items-center gap-1.5 px-4 py-2 bg-accent hover:brightness-110 text-accent-fg rounded-lg text-xs font-bold transition-colors shadow-soft"
               >
                 <Home className="w-3.5 h-3.5" />
-                <span>Return to Docs Home</span>
+                <span>Return home</span>
               </button>
 
               <button
                 type="button"
                 onClick={this.handleReset}
-                className="flex items-center gap-1.5 px-4 py-2 border border-[#dadce0] hover:bg-[#f1f3f4] text-[#3c4043] rounded-lg text-xs font-medium transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 border border-line hover:bg-muted text-fg-soft rounded-lg text-xs font-semibold transition-colors"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Reload</span>
